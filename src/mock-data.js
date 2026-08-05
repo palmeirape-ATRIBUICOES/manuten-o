@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MOCK DATA - SAAS ASSET MANAGEMENT (SPRINT 2 INCLUDED)
+   MOCK DATA - SAAS ASSET MANAGEMENT (SPRINT 3 AI INCLUDED)
    ========================================================================== */
 
 export const currentTenant = {
@@ -8,8 +8,35 @@ export const currentTenant = {
   cnpj: "12.345.678/0001-90",
   plan: "Professional",
   activeUsers: 8,
-  defaultLaborRatePerHour: 120.00 // R$/hora
+  defaultLaborRatePerHour: 120.00
 };
+
+export const aiInsights = [
+  {
+    id: "insight-001",
+    assetId: "asset-002",
+    assetTag: "CHILLER-CARRIER-01",
+    customerName: "Condomínio Empresarial Torre Sul",
+    riskScore: 88, // 0-100% (88 = Alta probabilidade de falha)
+    riskLevel: "CRITICAL",
+    predictedFailureDate: "2026-08-25",
+    predictedComponent: "Compressor 1 - Rolamento Principal",
+    recommendation: "Recomendada intervenção preventiva em até 15 dias. Substituir rolamento NSK 6205-2RS antes de quebra catastrófica.",
+    financialSavingsIfPrevented: 4500.00
+  },
+  {
+    id: "insight-002",
+    assetId: "asset-001",
+    assetTag: "GER-500KVA-01",
+    customerName: "Hospital Central São Lucas",
+    riskScore: 24,
+    riskLevel: "LOW",
+    predictedFailureDate: "2027-02-10",
+    predictedComponent: "Sistema de Arrefecimento",
+    recommendation: "Equipamento com alta confiabilidade operacional. Manter rotina de inspeção mensal do PMOC.",
+    financialSavingsIfPrevented: 1200.00
+  }
+];
 
 export const partsInventory = [
   {
@@ -123,6 +150,9 @@ export const assets = [
     serialNumber: "SN-CUM-2024-9912",
     status: "INSTALLED",
     criticality: "CRITICAL",
+    healthIndexScore: 96, // 0-100%
+    mtbfHours: 720, // Mean Time Between Failures
+    mttrHours: 2.5, // Mean Time To Repair
     installationDate: "2024-03-10",
     warrantyExpiry: "2027-03-10",
     totalMaintenanceCost: 1450.00,
@@ -159,6 +189,9 @@ export const assets = [
     serialNumber: "SN-CAR-882211",
     status: "MAINTENANCE",
     criticality: "HIGH",
+    healthIndexScore: 42, // Alerta
+    mtbfHours: 340,
+    mttrHours: 4.8,
     installationDate: "2023-08-20",
     warrantyExpiry: "2026-08-20",
     totalMaintenanceCost: 2850.00,
@@ -194,6 +227,9 @@ export const assets = [
     serialNumber: "SN-HYS-773344",
     status: "INSTALLED",
     criticality: "MEDIUM",
+    healthIndexScore: 91,
+    mtbfHours: 580,
+    mttrHours: 1.8,
     installationDate: "2024-11-05",
     warrantyExpiry: "2026-11-05",
     totalMaintenanceCost: 350.00,
@@ -222,10 +258,16 @@ export const workOrders = [
     technicianName: "Carlos Eduardo (Técnico de Campo)",
     openedAt: "2026-08-04T14:30:00",
     laborHours: 3.5,
-    laborCost: 420.00, // 3.5 hrs * R$ 120,00
+    laborCost: 420.00,
     partsCost: 750.00,
     totalCost: 1170.00,
-    isWarrantyService: false,
+    aiAudit: {
+      isAudited: true,
+      confidence: 97.4, // %
+      detectedTag: "CHILLER-CARRIER-01",
+      photoVerified: true,
+      notes: "IA confirmou substituição física da válvula de expansão e ausência de vazamento de fluido."
+    },
     usedParts: [
       { partId: "part-003", partName: "Válvula Solenóide de Expansão Carrier", qty: 1, unitPrice: 750.00, isUnderWarranty: false }
     ],
@@ -258,7 +300,13 @@ export const workOrders = [
     laborCost: 360.00,
     partsCost: 310.00,
     totalCost: 670.00,
-    isWarrantyService: false,
+    aiAudit: {
+      isAudited: true,
+      confidence: 99.1,
+      detectedTag: "GER-500KVA-01",
+      photoVerified: true,
+      notes: "IA validou filtro de óleo novo instalado e etiqueta de manutenção afixada."
+    },
     usedParts: [
       { partId: "part-001", partName: "Filtro de Óleo Lubrificante Cummins", qty: 1, unitPrice: 220.00, isUnderWarranty: false },
       { partId: "part-002", partName: "Óleo Lubrificante 15W40 (Litro)", qty: 2, unitPrice: 45.00, isUnderWarranty: false }

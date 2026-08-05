@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SaaS Asset Management - Gestão de Ativos, Peças & Financeiro</title>
+  <title>SaaS Asset Management - Gestão de Ativos, Peças & IA Preditiva</title>
   
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="src/assets/styles/main.css">
@@ -41,6 +41,10 @@
         <div class="nav-item" data-view="financial">
           <i data-lucide="dollar-sign"></i>
           <span>Financeiro & Peças</span>
+        </div>
+        <div class="nav-item" data-view="ai-insights">
+          <i data-lucide="sparkles"></i>
+          <span>IA & Predição</span>
         </div>
         <div class="nav-item" data-view="customers">
           <i data-lucide="building-2"></i>
@@ -256,6 +260,7 @@
                   <th>Cliente & Local</th>
                   <th>Prioridade / SLA</th>
                   <th>Status</th>
+                  <th>Auditoria IA</th>
                   <th>Custo Total</th>
                   <th>Ações</th>
                 </tr>
@@ -267,7 +272,7 @@
           </div>
         </section>
 
-        <!-- 5. FINANCIAL & PARTS INVENTORY VIEW (SPRINT 2) -->
+        <!-- 5. FINANCIAL & PARTS INVENTORY VIEW -->
         <section id="view-financial" class="app-view" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <div>
@@ -329,7 +334,6 @@
 
           <!-- Inventory & Billing Tables -->
           <div style="display: flex; flex-direction: column; gap: 24px;">
-            <!-- Inventory Table -->
             <div class="card">
               <h3 style="margin-bottom: 16px;">Catálogo & Estoque de Peças de Reposição</h3>
               <div class="table-wrapper">
@@ -352,7 +356,6 @@
               </div>
             </div>
 
-            <!-- Client Billing Summary -->
             <div class="card">
               <h3 style="margin-bottom: 16px;">Resumo de Faturamento por Cliente (Mês Atual)</h3>
               <div class="table-wrapper">
@@ -375,7 +378,113 @@
           </div>
         </section>
 
-        <!-- 6. CUSTOMERS VIEW -->
+        <!-- 6. AI INSIGHTS & PREDICTIVE HEALTH VIEW (SPRINT 3) -->
+        <section id="view-ai-insights" class="app-view" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <div>
+              <h2>Inteligência Artificial Operacional & Predição de Falhas</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">Algoritmos preditivos, auditoria de evidências fotográficas e assistente inteligente.</p>
+            </div>
+            <div class="badge badge-info" style="font-size: 0.85rem; padding: 6px 14px;">
+              <i data-lucide="sparkles"></i> IA Engine Active (v3.0)
+            </div>
+          </div>
+
+          <!-- AI KPIs -->
+          <div class="grid-stats">
+            <div class="card">
+              <div class="stat-header">
+                <span>Ativos sob Monitoramento IA</span>
+                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+                  <i data-lucide="cpu"></i>
+                </div>
+              </div>
+              <div class="stat-value">142</div>
+              <div class="stat-sub">Análise contínua de horímetro & MTBF</div>
+            </div>
+
+            <div class="card">
+              <div class="stat-header">
+                <span>Alertas Preditivos de Risco</span>
+                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+                  <i data-lucide="alert-circle"></i>
+                </div>
+              </div>
+              <div class="stat-value">1 Ativo Crítico</div>
+              <div class="stat-sub">Risco de falha de 88% em 20 dias</div>
+            </div>
+
+            <div class="card">
+              <div class="stat-header">
+                <span>Acurácia da Visão Computacional</span>
+                <div class="stat-icon" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">
+                  <i data-lucide="eye"></i>
+                </div>
+              </div>
+              <div class="stat-value">98.4%</div>
+              <div class="stat-sub">Auditoria de fotos antes/depois</div>
+            </div>
+
+            <div class="card">
+              <div class="stat-header">
+                <span>Economia Preditiva Estimada</span>
+                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+                  <i data-lucide="trending-up"></i>
+                </div>
+              </div>
+              <div class="stat-value">R$ 5.700,00</div>
+              <div class="stat-sub">Evitado em paradas não programadas</div>
+            </div>
+          </div>
+
+          <!-- AI Content Layout -->
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+            <!-- AI Insights Cards -->
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+              <div class="card">
+                <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                  <i data-lucide="alert-octagon" style="color: var(--danger);"></i>
+                  Matriz Preditiva de Risco de Falhas (Próximos 30 Dias)
+                </h3>
+                <div id="ai-insights-list" style="display: flex; flex-direction: column; gap: 14px;">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+
+              <!-- Smart AI Assistant Box -->
+              <div class="card">
+                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                  <i data-lucide="bot" style="color: var(--primary);"></i>
+                  Assistente Inteligente da Plataforma (Smart AI Query)
+                </h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Faça perguntas em linguagem natural sobre o estado de saúde dos seus ativos ou estoque de peças.</p>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+                  <input type="text" class="form-control" id="ai-query-input" placeholder="Ex: Qual o equipamento com maior risco de quebra este mês?">
+                  <button class="btn btn-primary" id="btn-submit-ai-query">
+                    <i data-lucide="send"></i> Consultar
+                  </button>
+                </div>
+
+                <div id="ai-query-response-box" style="display: none; padding: 14px; background: var(--bg-primary); border-radius: var(--radius-md); border-left: 3px solid var(--primary); font-size: 0.875rem;">
+                  <!-- Response rendered dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Vision Audit Sidebar -->
+            <div class="card">
+              <h3 style="margin-bottom: 14px;">Auditor de Fotos (Visão Computacional)</h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">A IA analisa a resolução, etiqueta de identificação e integridade das fotos tiradas pelos técnicos.</p>
+
+              <div style="display: flex; flex-direction: column; gap: 14px;" id="ai-vision-audit-list">
+                <!-- Audit logs rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. CUSTOMERS VIEW -->
         <section id="view-customers" class="app-view" style="display: none;">
           <h2>Clientes & Locais de Instalação</h2>
           <p style="color: var(--text-muted); margin-bottom: 24px;">Gestão de contratos e parques de ativos por cliente.</p>
@@ -384,7 +493,7 @@
           </div>
         </section>
 
-        <!-- 7. SETTINGS VIEW -->
+        <!-- 8. SETTINGS VIEW -->
         <section id="view-settings" class="app-view" style="display: none;">
           <h2>Configurações do Tenant & SaaS</h2>
           <p style="color: var(--text-muted); margin-bottom: 24px;">Plano ativo, regras de SLA e exportação de dados.</p>
@@ -451,7 +560,7 @@
     </div>
   </div>
 
-  <!-- Modal: Cadastrar Nova Peça no Estoque (Sprint 2) -->
+  <!-- Modal: Cadastrar Nova Peça no Estoque -->
   <div class="modal-overlay" id="modal-add-part">
     <div class="modal-card">
       <div class="modal-header">
@@ -556,7 +665,7 @@
       </div>
 
       <div style="margin-bottom: 20px;">
-        <h4 style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">2. Evidências Visuais (Fotos Antes / Depois)</h4>
+        <h4 style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">2. Evidências Visuais (Fotos Antes / Depois com Auditoria IA)</h4>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
           <div style="border: 1px dashed var(--border-color); padding: 14px; border-radius: var(--radius-md); text-align: center;">
             <div style="font-size: 0.8rem; margin-bottom: 6px;">Foto Estado Inicial (Antes)</div>

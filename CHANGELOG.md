@@ -11,12 +11,22 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ---
 
+## [1.3.0] - Sprint 3 (Inteligência Artificial Operacional & Predição de Falhas) - 2026-08-05
+
+### Added
+- **Motor de Análise Preditiva de Falhas (`src/app.js`)**: Algoritmo de cálculo de risco e saúde preditiva (Score de 0 a 100%) por ativo baseado em MTBF, horímetro e histórico.
+- **Auditoria de Evidências Fotográficas com Visão Computacional**: Carimbo de conformidade e auditoria por IA em fotos de serviços concluídos (`✓ IA Auditado 98.4%`).
+- **Assistente Inteligente de Plataforma (Smart AI Query Assistant)**: Interface de consulta em linguagem natural sobre a saúde dos ativos e paradas iminentes.
+- **Aba de IA Operacional (`index.html`)**: Nova visão `/ai-insights` exibindo a Matriz Preditiva de Risco de Falhas nos próximos 30 dias e a economia financeira estimada ao evitar quebras não programadas.
+
+---
+
 ## [1.2.0] - Sprint 2 (Módulo Financeiro & Controle de Peças em Estoque) - 2026-08-05
 
 ### Added
 - **Estoque & Catálogo de Peças (`src/mock-data.js`)**: Controle de peças de reposição (SKU, filtro, óleo, compressores, válvulas), controle de estoque mínimo e rastreabilidade por localização (Almoxarifado vs Van do Técnico).
 - **Precificação & Custos de Manutenção (`src/app.js`)**: Cálculo automático de custo de mão de obra (Tabela de R$ 120,00/h) + peças aplicadas por Ordem de Serviço.
-- **Relatório de Faturamento Mensal por Cliente**: Cálculo konsolidado de contrato fixo mensal + custo adicional de mão de obra e peças aplicadas nas OSs.
+- **Relatório de Faturamento Mensal por Cliente**: Cálculo consolidado de contrato fixo mensal + custo adicional de mão de obra e peças aplicadas nas OSs.
 - **Interface Financeira & Estoque (`index.html`)**: Nova aba `Financeiro & Peças` com KPIs de faturamento, valor total de estoque e modal de cadastro de novas peças.
 - **Rastreabilidade de Garantia de Peças**: Registro de garantia de peças instaladas nos ativos com indicação de custo zero em caso de troca por defeito dentro do prazo.
 

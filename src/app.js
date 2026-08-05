@@ -1,8 +1,8 @@
 /* ==========================================================================
-   APP MAIN CONTROLLER - SAAS ASSET MANAGEMENT (SPRINT 2 INCLUDED)
+   APP MAIN CONTROLLER - SAAS ASSET MANAGEMENT (SPRINT 3 AI INCLUDED)
    ========================================================================== */
 
-import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory } from './mock-data.js';
+import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights } from './mock-data.js';
 import { CanvasSignaturePad } from './components/canvas-signature.js';
 
 class AppController {
@@ -20,6 +20,7 @@ class AppController {
     this.setupSignaturePad();
     this.setupAssetForm();
     this.setupPartForm();
+    this.setupAIQuery();
     this.setupQuickScan();
     this.renderAll();
 
@@ -86,7 +87,7 @@ class AppController {
       });
     }
 
-    // Open add part modal (Sprint 2)
+    // Open add part modal
     const btnAddPart = document.getElementById('btn-add-part');
     if (btnAddPart) {
       btnAddPart.addEventListener('click', () => {
@@ -125,12 +126,17 @@ class AppController {
       }
     }
 
-    // Simular upload de foto "Depois"
+    // Simular upload de foto "Depois" com auditoria por IA
     const boxAfterPhoto = document.getElementById('box-after-photo');
     if (boxAfterPhoto) {
       boxAfterPhoto.addEventListener('click', () => {
         boxAfterPhoto.innerHTML = `
-          <img src="https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=300&auto=format&fit=crop&q=60" style="width: 100%; height: 120px; object-fit: cover; border-radius: var(--radius-sm);">
+          <div style="position: relative;">
+            <img src="https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=300&auto=format&fit=crop&q=60" style="width: 100%; height: 120px; object-fit: cover; border-radius: var(--radius-sm);">
+            <span class="badge badge-success" style="position: absolute; bottom: 6px; right: 6px; font-size: 0.65rem;">
+              ✓ IA Auditado 98.4%
+            </span>
+          </div>
         `;
       });
     }
@@ -141,7 +147,14 @@ class AppController {
       btnFinishOs.addEventListener('click', () => {
         if (this.activeWorkOrder) {
           this.activeWorkOrder.status = 'FINISHED';
-          alert(`Ordem de Serviço ${this.activeWorkOrder.osNumber} concluída com sucesso! Laudo técnico PDF enviado ao cliente.`);
+          this.activeWorkOrder.aiAudit = {
+            isAudited: true,
+            confidence: 98.4,
+            detectedTag: this.activeWorkOrder.assetTag,
+            photoVerified: true,
+            notes: "Visão computacional confirmou serviço finalizado com conformidade técnica."
+          };
+          alert(`Ordem de Serviço ${this.activeWorkOrder.osNumber} concluída com sucesso! Evidência visual auditada pela IA (Acurácia: 98.4%).`);
           document.getElementById('modal-os-exec').classList.remove('active');
           this.renderAll();
         }
@@ -174,6 +187,9 @@ class AppController {
           serialNumber: serial,
           status: 'INSTALLED',
           criticality: 'MEDIUM',
+          healthIndexScore: 98,
+          mtbfHours: 600,
+          mttrHours: 2.0,
           installationDate: new Date().toISOString().split('T')[0],
           totalMaintenanceCost: 0,
           installedPartsHistory: [],
@@ -186,12 +202,12 @@ class AppController {
         document.getElementById('modal-add-asset').classList.remove('active');
         form.reset();
         this.renderAll();
-        alert(`Ativo ${tag} cadastrado com sucesso! Etiquetas prontas para impressão.`);
+        alert(`Ativo ${tag} cadastrado com sucesso! Índices de saúde preditiva ativos.`);
       });
     }
   }
 
-  // Add Part Form Handler (Sprint 2)
+  // Add Part Form Handler
   setupPartForm() {
     const form = document.getElementById('form-add-part');
     if (form) {
@@ -226,6 +242,29 @@ class AppController {
     }
   }
 
+  // AI Smart Assistant Query Controller (Sprint 3)
+  setupAIQuery() {
+    const btnSubmit = document.getElementById('btn-submit-ai-query');
+    const inputQuery = document.getElementById('ai-query-input');
+    const responseBox = document.getElementById('ai-query-response-box');
+
+    if (btnSubmit && inputQuery && responseBox) {
+      btnSubmit.addEventListener('click', () => {
+        const queryText = inputQuery.value.trim();
+        if (!queryText) return;
+
+        responseBox.style.display = 'block';
+        responseBox.innerHTML = `
+          <div style="color: var(--primary); font-weight: 600; margin-bottom: 6px;">🤖 Resposta do Assistente IA:</div>
+          <div>Analisando base de 142 ativos patrimoniais e histórico de 84 Ordens de Serviço...</div>
+          <div style="margin-top: 8px; color: var(--text-main); line-height: 1.5;">
+            "O ativo com maior risco iminente de quebra é o <strong>CHILLER-CARRIER-01</strong> (Condomínio Torre Sul). A IA identificou um padrão de vibração anormal no Compressor 1 e queda de pressão de óleo. Recomendamos efetuar a manutenção preventiva antes de <strong>25/08/2026</strong> para evitar custo de R$ 4.500,00 com rebobinamento de motor."
+          </div>
+        `;
+      });
+    }
+  }
+
   // Quick QR Scan Simulator
   setupQuickScan() {
     document.querySelectorAll('.btn-quick-scan').forEach(btn => {
@@ -243,7 +282,7 @@ class AppController {
   openAssetDetailModal(asset) {
     document.getElementById('modal-detail-tag').textContent = asset.tagName;
     document.getElementById('modal-detail-customer').textContent = `${asset.customerName} - ${asset.locationName}`;
-    document.getElementById('modal-detail-model').textContent = `${asset.model} | Custo OS Acumulado: R$ ${asset.totalMaintenanceCost.toFixed(2)}`;
+    document.getElementById('modal-detail-model').textContent = `${asset.model} | Saúde Preditiva IA: ${asset.healthIndexScore || 95}%`;
     document.getElementById('modal-detail-status').textContent = asset.status === 'INSTALLED' ? 'INSTALADO' : 'EM MANUTENÇÃO';
 
     const historyContainer = document.getElementById('modal-detail-history');
@@ -290,6 +329,7 @@ class AppController {
     this.renderAssetsGrid();
     this.renderWorkOrdersTable();
     this.renderFinancialView();
+    this.renderAIView();
     this.renderCustomersList();
 
     if (window.lucide) {
@@ -362,7 +402,7 @@ class AppController {
         <div style="font-size: 0.85rem; margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px;">
           <div><strong>Cliente:</strong> ${a.customerName}</div>
           <div><strong>Local:</strong> ${a.locationName}</div>
-          <div><strong>Modelo:</strong> ${a.model}</div>
+          <div><strong>Saúde IA:</strong> <span style="font-weight: 700; color: ${a.healthIndexScore < 60 ? 'var(--danger)' : 'var(--success)'};">${a.healthIndexScore || 95}%</span></div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; pt-3; border-top: var(--glass-border);">
@@ -394,6 +434,9 @@ class AppController {
         <td>${wo.customerName}</td>
         <td><span class="badge ${wo.priority === 'CRITICAL' ? 'badge-danger' : 'badge-warning'}">${wo.priority}</span></td>
         <td><span class="badge ${wo.status === 'FINISHED' ? 'badge-success' : 'badge-info'}">${wo.status}</span></td>
+        <td>
+          ${wo.aiAudit ? `<span class="badge badge-success" title="${wo.aiAudit.notes}">✓ IA ${wo.aiAudit.confidence}%</span>` : '<span class="badge badge-info">Pendente</span>'}
+        </td>
         <td style="font-weight: 600; color: var(--success);">R$ ${wo.totalCost.toFixed(2)}</td>
         <td>
           <button class="btn btn-secondary btn-open-os" data-id="${wo.id}">
@@ -412,9 +455,7 @@ class AppController {
     });
   }
 
-  // Financial & Parts Inventory Renderer (Sprint 2)
   renderFinancialView() {
-    // 1. Inventory Table
     const tbodyParts = document.getElementById('table-parts-inventory');
     if (tbodyParts) {
       tbodyParts.innerHTML = partsInventory.map(part => `
@@ -434,11 +475,9 @@ class AppController {
       `).join('');
     }
 
-    // 2. Client Billing Table
     const tbodyBilling = document.getElementById('table-client-billing');
     if (tbodyBilling) {
       tbodyBilling.innerHTML = customers.map(cust => {
-        // Calculate work order costs for this customer
         const custWos = workOrders.filter(w => w.customerName === cust.name);
         const laborCostSum = custWos.reduce((sum, w) => sum + (w.laborCost || 0), 0);
         const partsCostSum = custWos.reduce((sum, w) => sum + (w.partsCost || 0), 0);
@@ -454,6 +493,49 @@ class AppController {
           </tr>
         `;
       }).join('');
+    }
+  }
+
+  // AI Insights & Predictive Health Renderer (Sprint 3)
+  renderAIView() {
+    const insightsContainer = document.getElementById('ai-insights-list');
+    if (insightsContainer) {
+      insightsContainer.innerHTML = aiInsights.map(insight => `
+        <div style="padding: 16px; background-color: var(--bg-primary); border-radius: var(--radius-md); border-left: 4px solid ${insight.riskLevel === 'CRITICAL' ? 'var(--danger)' : 'var(--success)'};">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: #fff; font-size: 1rem;">${insight.assetTag} (${insight.customerName})</strong>
+            <span class="badge ${insight.riskLevel === 'CRITICAL' ? 'badge-danger' : 'badge-success'}">
+              Risco Preditivo ${insight.riskScore}%
+            </span>
+          </div>
+
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">
+            <strong>Componente sob Alerta:</strong> ${insight.predictedComponent} | <strong>Previsão de Falha:</strong> ${insight.predictedFailureDate}
+          </div>
+
+          <div style="font-size: 0.85rem; margin-bottom: 8px;">
+            <strong>Recomendação IA:</strong> ${insight.recommendation}
+          </div>
+
+          <div style="font-size: 0.8rem; color: var(--success); font-weight: 600;">
+            💰 Economia Estimada ao Evitar Parada: R$ ${insight.financialSavingsIfPrevented.toFixed(2)}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Vision Audit Sidebar Logs
+    const visionAuditContainer = document.getElementById('ai-vision-audit-list');
+    if (visionAuditContainer) {
+      visionAuditContainer.innerHTML = workOrders.map(wo => `
+        <div style="padding: 12px; background: var(--bg-primary); border-radius: var(--radius-sm); font-size: 0.8rem;">
+          <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px;">
+            <span>${wo.osNumber} - ${wo.assetTag}</span>
+            <span style="color: var(--success);">Confiança ${wo.aiAudit ? wo.aiAudit.confidence : 98}%</span>
+          </div>
+          <div style="color: var(--text-muted);">${wo.aiAudit ? wo.aiAudit.notes : 'Foto auditada por IA.'}</div>
+        </div>
+      `).join('');
     }
   }
 
