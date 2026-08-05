@@ -1,8 +1,8 @@
 /* ==========================================================================
-   APP MAIN CONTROLLER - SAAS ASSET MANAGEMENT
+   APP MAIN CONTROLLER - SAAS ASSET MANAGEMENT (SPRINT 2 INCLUDED)
    ========================================================================== */
 
-import { currentTenant, assetCategories, customers, assets, workOrders } from './mock-data.js';
+import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory } from './mock-data.js';
 import { CanvasSignaturePad } from './components/canvas-signature.js';
 
 class AppController {
@@ -19,6 +19,7 @@ class AppController {
     this.setupModalHandlers();
     this.setupSignaturePad();
     this.setupAssetForm();
+    this.setupPartForm();
     this.setupQuickScan();
     this.renderAll();
 
@@ -82,6 +83,14 @@ class AppController {
     if (btnAddAsset) {
       btnAddAsset.addEventListener('click', () => {
         document.getElementById('modal-add-asset').classList.add('active');
+      });
+    }
+
+    // Open add part modal (Sprint 2)
+    const btnAddPart = document.getElementById('btn-add-part');
+    if (btnAddPart) {
+      btnAddPart.addEventListener('click', () => {
+        document.getElementById('modal-add-part').classList.add('active');
       });
     }
 
@@ -166,6 +175,8 @@ class AppController {
           status: 'INSTALLED',
           criticality: 'MEDIUM',
           installationDate: new Date().toISOString().split('T')[0],
+          totalMaintenanceCost: 0,
+          installedPartsHistory: [],
           history: [
             { date: new Date().toISOString().split('T')[0], type: 'INSTALLATION', text: 'Ativo registrado e QR Code gerado.' }
           ]
@@ -176,6 +187,41 @@ class AppController {
         form.reset();
         this.renderAll();
         alert(`Ativo ${tag} cadastrado com sucesso! Etiquetas prontas para impressão.`);
+      });
+    }
+  }
+
+  // Add Part Form Handler (Sprint 2)
+  setupPartForm() {
+    const form = document.getElementById('form-add-part');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('new-part-name').value;
+        const sku = document.getElementById('new-part-sku').value;
+        const category = document.getElementById('new-part-category').value;
+        const price = parseFloat(document.getElementById('new-part-price').value);
+        const qty = parseInt(document.getElementById('new-part-qty').value, 10);
+        const warranty = parseInt(document.getElementById('new-part-warranty').value, 10);
+
+        const newPart = {
+          id: `part-${Date.now()}`,
+          sku: sku,
+          name: name,
+          category: category,
+          unitCost: price * 0.6,
+          unitPrice: price,
+          stockQuantity: qty,
+          minStockQuantity: 3,
+          location: "Almoxarifado Central",
+          warrantyMonths: warranty
+        };
+
+        partsInventory.unshift(newPart);
+        document.getElementById('modal-add-part').classList.remove('active');
+        form.reset();
+        this.renderAll();
+        alert(`Peça ${name} cadastrada com sucesso no estoque!`);
       });
     }
   }
@@ -197,7 +243,7 @@ class AppController {
   openAssetDetailModal(asset) {
     document.getElementById('modal-detail-tag').textContent = asset.tagName;
     document.getElementById('modal-detail-customer').textContent = `${asset.customerName} - ${asset.locationName}`;
-    document.getElementById('modal-detail-model').textContent = `${asset.model} | Série: ${asset.serialNumber}`;
+    document.getElementById('modal-detail-model').textContent = `${asset.model} | Custo OS Acumulado: R$ ${asset.totalMaintenanceCost.toFixed(2)}`;
     document.getElementById('modal-detail-status').textContent = asset.status === 'INSTALLED' ? 'INSTALADO' : 'EM MANUTENÇÃO';
 
     const historyContainer = document.getElementById('modal-detail-history');
@@ -243,6 +289,7 @@ class AppController {
     this.renderCategoryDistribution();
     this.renderAssetsGrid();
     this.renderWorkOrdersTable();
+    this.renderFinancialView();
     this.renderCustomersList();
 
     if (window.lucide) {
@@ -269,7 +316,6 @@ class AppController {
       </tr>
     `).join('');
 
-    // Bind click handlers for OS execution buttons
     tbody.querySelectorAll('.btn-open-os').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -348,6 +394,7 @@ class AppController {
         <td>${wo.customerName}</td>
         <td><span class="badge ${wo.priority === 'CRITICAL' ? 'badge-danger' : 'badge-warning'}">${wo.priority}</span></td>
         <td><span class="badge ${wo.status === 'FINISHED' ? 'badge-success' : 'badge-info'}">${wo.status}</span></td>
+        <td style="font-weight: 600; color: var(--success);">R$ ${wo.totalCost.toFixed(2)}</td>
         <td>
           <button class="btn btn-secondary btn-open-os" data-id="${wo.id}">
             <i data-lucide="play"></i> Abrir
@@ -363,6 +410,51 @@ class AppController {
         if (wo) this.openWorkOrderExecModal(wo);
       });
     });
+  }
+
+  // Financial & Parts Inventory Renderer (Sprint 2)
+  renderFinancialView() {
+    // 1. Inventory Table
+    const tbodyParts = document.getElementById('table-parts-inventory');
+    if (tbodyParts) {
+      tbodyParts.innerHTML = partsInventory.map(part => `
+        <tr>
+          <td style="font-family: monospace; color: var(--primary); font-weight: 600;">${part.sku}</td>
+          <td><strong>${part.name}</strong></td>
+          <td><span class="badge badge-info">${part.category}</span></td>
+          <td style="font-weight: 600;">R$ ${part.unitPrice.toFixed(2)}</td>
+          <td>
+            <span class="badge ${part.stockQuantity <= part.minStockQuantity ? 'badge-danger' : 'badge-success'}">
+              ${part.stockQuantity} un
+            </span>
+          </td>
+          <td style="font-size: 0.85rem; color: var(--text-muted);">${part.location}</td>
+          <td>${part.warrantyMonths > 0 ? `${part.warrantyMonths} meses` : 'Sem garantia'}</td>
+        </tr>
+      `).join('');
+    }
+
+    // 2. Client Billing Table
+    const tbodyBilling = document.getElementById('table-client-billing');
+    if (tbodyBilling) {
+      tbodyBilling.innerHTML = customers.map(cust => {
+        // Calculate work order costs for this customer
+        const custWos = workOrders.filter(w => w.customerName === cust.name);
+        const laborCostSum = custWos.reduce((sum, w) => sum + (w.laborCost || 0), 0);
+        const partsCostSum = custWos.reduce((sum, w) => sum + (w.partsCost || 0), 0);
+        const grandTotal = cust.contractValueMonthly + laborCostSum + partsCostSum;
+
+        return `
+          <tr>
+            <td><strong>${cust.name}</strong></td>
+            <td>R$ ${cust.contractValueMonthly.toFixed(2)}</td>
+            <td>R$ ${laborCostSum.toFixed(2)}</td>
+            <td>R$ ${partsCostSum.toFixed(2)}</td>
+            <td style="font-weight: 700; color: var(--success); font-size: 1rem;">R$ ${grandTotal.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
   }
 
   renderCustomersList() {

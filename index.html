@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SaaS Asset Management - Gestão de Ativos & Ordens de Serviço</title>
+  <title>SaaS Asset Management - Gestão de Ativos, Peças & Financeiro</title>
   
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="src/assets/styles/main.css">
@@ -38,6 +38,10 @@
           <i data-lucide="wrench"></i>
           <span>Ordens de Serviço</span>
         </div>
+        <div class="nav-item" data-view="financial">
+          <i data-lucide="dollar-sign"></i>
+          <span>Financeiro & Peças</span>
+        </div>
         <div class="nav-item" data-view="customers">
           <i data-lucide="building-2"></i>
           <span>Clientes & Locais</span>
@@ -55,7 +59,7 @@
       <header class="topbar">
         <div class="topbar-search">
           <i data-lucide="search" style="color: var(--text-muted);"></i>
-          <input type="text" id="global-search" placeholder="Buscar por Tag, QR Code, Série ou Cliente...">
+          <input type="text" id="global-search" placeholder="Buscar por Tag, QR Code, Série ou Peça...">
         </div>
 
         <div class="topbar-actions">
@@ -252,6 +256,7 @@
                   <th>Cliente & Local</th>
                   <th>Prioridade / SLA</th>
                   <th>Status</th>
+                  <th>Custo Total</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -262,7 +267,115 @@
           </div>
         </section>
 
-        <!-- 5. CUSTOMERS VIEW -->
+        <!-- 5. FINANCIAL & PARTS INVENTORY VIEW (SPRINT 2) -->
+        <section id="view-financial" class="app-view" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <div>
+              <h2>Gestão Financeira & Estoque de Peças</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">Faturamento de OS, controle de estoque em vans, custos por ativo e garantias.</p>
+            </div>
+            <button class="btn btn-primary" id="btn-add-part">
+              <i data-lucide="package-plus"></i>
+              Cadastrar Nova Peça
+            </button>
+          </div>
+
+          <!-- Financial KPIs -->
+          <div class="grid-stats">
+            <div class="card">
+              <div class="stat-header">
+                <span>Faturamento Estimado (Mês)</span>
+                <div class="stat-icon" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">
+                  <i data-lucide="dollar-sign"></i>
+                </div>
+              </div>
+              <div class="stat-value" id="kpi-monthly-revenue">R$ 10.140,00</div>
+              <div class="stat-sub">Contratos + Mão de Obra + Peças</div>
+            </div>
+
+            <div class="card">
+              <div class="stat-header">
+                <span>Valor Total de Peças em Estoque</span>
+                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+                  <i data-lucide="package"></i>
+                </div>
+              </div>
+              <div class="stat-value" id="kpi-inventory-value">R$ 15.680,00</div>
+              <div class="stat-sub">222 itens em almoxarifado & vans</div>
+            </div>
+
+            <div class="card">
+              <div class="stat-header">
+                <span>Peças Substituídas sob Garantia</span>
+                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
+                  <i data-lucide="shield-check"></i>
+                </div>
+              </div>
+              <div class="stat-value" id="kpi-warranty-claims">2</div>
+              <div class="stat-sub">R$ 1.230,00 economizados para clientes</div>
+            </div>
+
+            <div class="card">
+              <div class="stat-header">
+                <span>Taxa Média Mão de Obra</span>
+                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
+                  <i data-lucide="clock"></i>
+                </div>
+              </div>
+              <div class="stat-value">R$ 120,00/h</div>
+              <div class="stat-sub">Valor de tabela por hora de técnico</div>
+            </div>
+          </div>
+
+          <!-- Inventory & Billing Tables -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+            <!-- Inventory Table -->
+            <div class="card">
+              <h3 style="margin-bottom: 16px;">Catálogo & Estoque de Peças de Reposição</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>SKU</th>
+                      <th>Nome da Peça / Componente</th>
+                      <th>Categoria</th>
+                      <th>Preço Unit.</th>
+                      <th>Em Estoque</th>
+                      <th>Localização</th>
+                      <th>Garantia</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-parts-inventory">
+                    <!-- Rendered dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Client Billing Summary -->
+            <div class="card">
+              <h3 style="margin-bottom: 16px;">Resumo de Faturamento por Cliente (Mês Atual)</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Valor Contrato Fixo</th>
+                      <th>Custo Mão de Obra (OSs)</th>
+                      <th>Custo Peças Aplicadas</th>
+                      <th>Total a Faturar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-client-billing">
+                    <!-- Rendered dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. CUSTOMERS VIEW -->
         <section id="view-customers" class="app-view" style="display: none;">
           <h2>Clientes & Locais de Instalação</h2>
           <p style="color: var(--text-muted); margin-bottom: 24px;">Gestão de contratos e parques de ativos por cliente.</p>
@@ -271,7 +384,7 @@
           </div>
         </section>
 
-        <!-- 6. SETTINGS VIEW -->
+        <!-- 7. SETTINGS VIEW -->
         <section id="view-settings" class="app-view" style="display: none;">
           <h2>Configurações do Tenant & SaaS</h2>
           <p style="color: var(--text-muted); margin-bottom: 24px;">Plano ativo, regras de SLA e exportação de dados.</p>
@@ -338,6 +451,53 @@
     </div>
   </div>
 
+  <!-- Modal: Cadastrar Nova Peça no Estoque (Sprint 2) -->
+  <div class="modal-overlay" id="modal-add-part">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Cadastrar Nova Peça / Insumo</h3>
+        <button class="btn btn-secondary btn-icon btn-close-modal"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-add-part">
+        <div class="form-group">
+          <label class="form-label">Nome da Peça / Componente</label>
+          <input type="text" class="form-control" id="new-part-name" placeholder="Ex: Correia Dentada Continental 8PK" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">SKU / Código</label>
+            <input type="text" class="form-control" id="new-part-sku" placeholder="Ex: PECA-CORR-08" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Categoria de Peça</label>
+            <input type="text" class="form-control" id="new-part-category" placeholder="Ex: Componentes Mecânicos" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">Preço de Venda (R$)</label>
+            <input type="number" step="0.01" class="form-control" id="new-part-price" placeholder="150.00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Qtd. Estoque</label>
+            <input type="number" class="form-control" id="new-part-qty" placeholder="10" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Garantia (Meses)</label>
+            <input type="number" class="form-control" id="new-part-warranty" placeholder="6" required>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Cadastrar Peça</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal: Prontuário Digital do Ativo -->
   <div class="modal-overlay" id="modal-asset-detail">
     <div class="modal-card" style="max-width: 750px;">
@@ -355,13 +515,13 @@
           <div style="font-weight: 600;" id="modal-detail-customer">Hospital Central</div>
         </div>
         <div>
-          <div style="font-size: 0.8rem; color: var(--text-muted);">Modelo & Série</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Modelo & Custo Acumulado de Manutenção</div>
           <div style="font-weight: 600;" id="modal-detail-model">Cummins / SN-9912</div>
         </div>
       </div>
 
       <div style="margin-bottom: 24px; padding: 16px; background-color: var(--bg-card); border-radius: var(--radius-md);">
-        <h4 style="font-size: 0.95rem; margin-bottom: 10px;">Histórico Imutável do Ativo</h4>
+        <h4 style="font-size: 0.95rem; margin-bottom: 10px;">Histórico Imutável & Troca de Peças</h4>
         <div id="modal-detail-history" style="display: flex; flex-direction: column; gap: 10px;">
           <!-- History entries rendered here -->
         </div>
