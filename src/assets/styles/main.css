@@ -1,0 +1,503 @@
+/* ==========================================================================
+   SAAS ASSET MANAGEMENT - DESIGN SYSTEM & STYLES CORE
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Color Palette - HSL Tailored System */
+  --bg-primary: Hsl(222, 47%, 7%);
+  --bg-secondary: Hsl(222, 47%, 11%);
+  --bg-card: Hsl(222, 40%, 14%);
+  --bg-card-hover: Hsl(222, 40%, 18%);
+  --bg-glass: Rgba(22, 30, 46, 0.75);
+  
+  --border-color: Hsl(217, 28%, 20%);
+  --border-focus: Hsl(217, 91%, 60%);
+
+  --text-main: Hsl(210, 40%, 98%);
+  --text-muted: Hsl(215, 20%, 65%);
+  --text-dark: Hsl(222, 47%, 11%);
+
+  /* Brand Accent Colors */
+  --primary: Hsl(234, 89%, 64%);
+  --primary-hover: Hsl(234, 89%, 58%);
+  --primary-light: Rgba(99, 102, 241, 0.15);
+
+  /* Status System Colors */
+  --success: Hsl(142, 71%, 45%);
+  --success-bg: Rgba(34, 197, 94, 0.12);
+  --warning: Hsl(38, 92%, 50%);
+  --warning-bg: Rgba(245, 158, 11, 0.12);
+  --danger: Hsl(354, 70%, 54%);
+  --danger-bg: Rgba(239, 68, 68, 0.12);
+  --info: Hsl(217, 91%, 60%);
+  --info-bg: Rgba(59, 130, 246, 0.12);
+
+  /* Layout Constants */
+  --header-height: 70px;
+  --sidebar-width: 260px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  
+  --shadow-sm: 0 2px 4px Rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 8px 16px Rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 32px Rgba(0, 0, 0, 0.4);
+  --glass-border: 1px Solid Rgba(255, 255, 255, 0.08);
+
+  --font-body: 'Inter', System-ui, -apple-system, Sans-serif;
+  --font-heading: 'Outfit', System-ui, -apple-system, Sans-serif;
+}
+
+/* Base Resets */
+*, *::before, *::after {
+  Box-sizing: Border-box;
+  Margin: 0;
+  Padding: 0;
+}
+
+Body {
+  Font-family: Var(--font-body);
+  Background-color: Var(--bg-primary);
+  Color: Var(--text-main);
+  Line-height: 1.5;
+  Overflow-x: Hidden;
+  -webkit-font-smoothing: Antialiased;
+}
+
+H1, h2, h3, h4, h5, h6 {
+  Font-family: Var(--font-heading);
+  Font-weight: 700;
+  Color: Var(--text-main);
+  Line-height: 1.2;
+}
+
+Button, input, select, textarea {
+  Font-family: Inherit;
+  Font-size: Inherit;
+  Color: Inherit;
+}
+
+A {
+  Color: Var(--primary);
+  Text-decoration: None;
+}
+
+/* App Shell Layout */
+#app {
+  Display: Flex;
+  Min-height: 100vh;
+}
+
+.sidebar {
+  Width: Var(--sidebar-width);
+  Background-color: Var(--bg-secondary);
+  Border-right: Var(--glass-border);
+  Display: Flex;
+  Flex-direction: Column;
+  Position: Fixed;
+  Top: 0;
+  Bottom: 0;
+  Left: 0;
+  Z-index: 50;
+  Transition: Transform 0.3s Ease;
+}
+
+.sidebar-header {
+  Height: Var(--header-height);
+  Display: Flex;
+  Align-items: Center;
+  Gap: 12px;
+  Padding: 0 20px;
+  Border-bottom: Var(--glass-border);
+}
+
+.brand-icon {
+  Width: 38px;
+  Height: 38px;
+  Background: Linear-gradient(135deg, Var(--primary), #8b5cf6);
+  Border-radius: Var(--radius-md);
+  Display: Flex;
+  Align-items: Center;
+  Justify-content: Center;
+  Color: #fff;
+  Box-shadow: 0 4px 12px Rgba(99, 102, 241, 0.3);
+}
+
+.brand-title {
+  Font-size: 1.15rem;
+  Font-weight: 800;
+  Letter-spacing: -0.02em;
+  Background: Linear-gradient(135deg, #fff, #a5b4fc);
+  -webkit-background-clip: Text;
+  -webkit-text-fill-color: Transparent;
+}
+
+.sidebar-nav {
+  Padding: 20px 12px;
+  Flex: 1;
+  Display: Flex;
+  Flex-direction: Column;
+  Gap: 6px;
+  Overflow-y: Auto;
+}
+
+.nav-item {
+  Display: Flex;
+  Align-items: Center;
+  Gap: 12px;
+  Padding: 12px 16px;
+  Border-radius: Var(--radius-md);
+  Color: Var(--text-muted);
+  Font-weight: 500;
+  Cursor: Pointer;
+  Transition: All 0.2s Ease;
+}
+
+.nav-item:hover {
+  Background-color: Rgba(255, 255, 255, 0.05);
+  Color: Var(--text-main);
+}
+
+.nav-item.active {
+  Background: Linear-gradient(90deg, Var(--primary-light), Translucent);
+  Color: Var(--primary);
+  Border-left: 3px Solid Var(--primary);
+  Font-weight: 600;
+}
+
+.nav-item i {
+  Font-size: 1.25rem;
+}
+
+.main-content {
+  Margin-left: Var(--sidebar-width);
+  Flex: 1;
+  Display: Flex;
+  Flex-direction: Column;
+  Min-width: 0;
+}
+
+.topbar {
+  Height: Var(--header-height);
+  Background-color: Rgba(15, 23, 42, 0.8);
+  Backdrop-filter: Blur(12px);
+  Border-bottom: Var(--glass-border);
+  Display: Flex;
+  Align-items: Center;
+  Justify-content: Space-between;
+  Padding: 0 28px;
+  Position: Sticky;
+  Top: 0;
+  Z-index: 40;
+}
+
+.topbar-search {
+  Display: Flex;
+  Align-items: Center;
+  Background-color: Var(--bg-card);
+  Border: Var(--glass-border);
+  Border-radius: Var(--radius-full);
+  Padding: 8px 16px;
+  Width: 320px;
+  Gap: 10px;
+}
+
+.topbar-search input {
+  Background: None;
+  Border: None;
+  Outline: None;
+  Width: 100%;
+  Color: Var(--text-main);
+  Font-size: 0.9rem;
+}
+
+.topbar-actions {
+  Display: Flex;
+  Align-items: Center;
+  Gap: 16px;
+}
+
+.tenant-pill {
+  Display: Flex;
+  Align-items: Center;
+  Gap: 8px;
+  Background-color: Rgba(99, 102, 241, 0.1);
+  Border: 1px Solid Rgba(99, 102, 241, 0.25);
+  Padding: 6px 14px;
+  Border-radius: Var(--radius-full);
+  Font-size: 0.85rem;
+  Color: #a5b4fc;
+  Font-weight: 600;
+}
+
+.user-profile {
+  Display: Flex;
+  Align-items: Center;
+  Gap: 10px;
+  Cursor: Pointer;
+}
+
+.avatar {
+  Width: 36px;
+  Height: 36px;
+  Border-radius: Var(--radius-full);
+  Background: Linear-gradient(135deg, #ec4899, #8b5cf6);
+  Display: Flex;
+  Align-items: Center;
+  Justify-content: Center;
+  Font-weight: 700;
+  Color: #fff;
+  Font-size: 0.85rem;
+}
+
+.page-container {
+  Padding: 28px;
+  Flex: 1;
+}
+
+/* Card & Grid Utilities */
+.grid-stats {
+  Display: Grid;
+  Grid-template-columns: Repeat(auto-fit, minmax(220px, 1fr));
+  Gap: 20px;
+  Margin-bottom: 28px;
+}
+
+.card {
+  Background-color: Var(--bg-card);
+  Border: Var(--glass-border);
+  Border-radius: Var(--radius-lg);
+  Padding: 24px;
+  Position: Relative;
+  Overflow: Hidden;
+  Transition: Transform 0.2s Ease, Box-shadow 0.2s Ease;
+}
+
+.card:hover {
+  Background-color: Var(--bg-card-hover);
+  Transform: TranslateY(-2px);
+  Box-shadow: Var(--shadow-md);
+}
+
+.stat-header {
+  Display: Flex;
+  Align-items: Center;
+  Justify-content: Space-between;
+  Margin-bottom: 12px;
+  Color: Var(--text-muted);
+}
+
+.stat-icon {
+  Width: 42px;
+  Height: 42px;
+  Border-radius: Var(--radius-md);
+  Display: Flex;
+  Align-items: Center;
+  Justify-content: Center;
+  Font-size: 1.25rem;
+}
+
+.stat-value {
+  Font-size: 2rem;
+  Font-weight: 800;
+  Font-family: Var(--font-heading);
+  Margin-bottom: 4px;
+}
+
+.stat-sub {
+  Font-size: 0.825rem;
+  Color: Var(--text-muted);
+}
+
+/* Status Pills */
+.badge {
+  Display: Inline-flex;
+  Align-items: Center;
+  Gap: 6px;
+  Padding: 4px 10px;
+  Border-radius: Var(--radius-full);
+  Font-size: 0.75rem;
+  Font-weight: 600;
+  Text-transform: Uppercase;
+  Letter-spacing: 0.03em;
+}
+
+.badge-success { Background-color: Var(--success-bg); Color: Var(--success); }
+.badge-warning { Background-color: Var(--warning-bg); Color: Var(--warning); }
+.badge-danger  { Background-color: Var(--danger-bg); Color: Var(--danger); }
+.badge-info    { Background-color: Var(--info-bg); Color: Var(--info); }
+
+/* Buttons */
+.btn {
+  Display: Inline-flex;
+  Align-items: Center;
+  Justify-content: Center;
+  Gap: 8px;
+  Padding: 10px 20px;
+  Border-radius: Var(--radius-md);
+  Font-weight: 600;
+  Font-size: 0.9rem;
+  Cursor: Pointer;
+  Border: None;
+  Transition: All 0.2s Ease;
+}
+
+.btn-primary {
+  Background: Linear-gradient(135deg, Var(--primary), #4f46e5);
+  Color: #fff;
+  Box-shadow: 0 4px 14px Rgba(99, 102, 241, 0.35);
+}
+
+.btn-primary:hover {
+  Background: Linear-gradient(135deg, Var(--primary-hover), #4338ca);
+  Transform: TranslateY(-1px);
+}
+
+.btn-secondary {
+  Background-color: Rgba(255, 255, 255, 0.08);
+  Color: Var(--text-main);
+  Border: Var(--glass-border);
+}
+
+.btn-secondary:hover {
+  Background-color: Rgba(255, 255, 255, 0.14);
+}
+
+.btn-icon {
+  Width: 36px;
+  Height: 36px;
+  Padding: 0;
+  Border-radius: Var(--radius-md);
+}
+
+/* Modals */
+.modal-overlay {
+  Position: Fixed;
+  Top: 0; Left: 0; Right: 0; Bottom: 0;
+  Background-color: Rgba(0, 0, 0, 0.75);
+  Backdrop-filter: Blur(6px);
+  Z-index: 100;
+  Display: Flex;
+  Align-items: Center;
+  Justify-content: Center;
+  Opacity: 0;
+  Pointer-events: None;
+  Transition: Opacity 0.25s Ease;
+}
+
+.modal-overlay.active {
+  Opacity: 1;
+  Pointer-events: Auto;
+}
+
+.modal-card {
+  Background-color: Var(--bg-secondary);
+  Border: Var(--glass-border);
+  Border-radius: Var(--radius-lg);
+  Width: 90%;
+  Max-width: 650px;
+  Max-height: 90vh;
+  Overflow-y: Auto;
+  Padding: 28px;
+  Box-shadow: Var(--shadow-lg);
+  Transform: Scale(0.95);
+  Transition: Transform 0.25s Ease;
+}
+
+.modal-overlay.active .modal-card {
+  Transform: Scale(1);
+}
+
+.modal-header {
+  Display: Flex;
+  Align-items: Center;
+  Justify-content: Space-between;
+  Margin-bottom: 20px;
+  Border-bottom: Var(--glass-border);
+  Padding-bottom: 14px;
+}
+
+/* Forms */
+.form-group {
+  Margin-bottom: 18px;
+}
+
+.form-label {
+  Display: Block;
+  Font-size: 0.85rem;
+  Font-weight: 600;
+  Margin-bottom: 6px;
+  Color: Var(--text-muted);
+}
+
+.form-control {
+  Width: 100%;
+  Padding: 10px 14px;
+  Background-color: Var(--bg-card);
+  Border: Var(--glass-border);
+  Border-radius: Var(--radius-md);
+  Color: Var(--text-main);
+  Outline: None;
+  Transition: Border-color 0.2s;
+}
+
+.form-control:focus {
+  Border-color: Var(--primary);
+}
+
+/* Tables */
+.table-wrapper {
+  Background-color: Var(--bg-card);
+  Border: Var(--glass-border);
+  Border-radius: Var(--radius-lg);
+  Overflow: Hidden;
+}
+
+table {
+  Width: 100%;
+  Border-collapse: Collapse;
+  Text-align: Left;
+}
+
+th {
+  Background-color: Rgba(255, 255, 255, 0.03);
+  Padding: 14px 20px;
+  Font-size: 0.8rem;
+  Text-transform: Uppercase;
+  Color: Var(--text-muted);
+  Font-weight: 600;
+  Border-bottom: Var(--glass-border);
+}
+
+td {
+  Padding: 16px 20px;
+  Border-bottom: Var(--glass-border);
+  Font-size: 0.9rem;
+}
+
+tr:last-child td {
+  Border-bottom: None;
+}
+
+tr:hover td {
+  Background-color: Rgba(255, 255, 255, 0.02);
+}
+
+/* QR Code Thermal Label Printing Style */
+@media print {
+  body * { Visibility: Hidden; }
+  .printable-label, .printable-label * { Visibility: Visible; }
+  .printable-label {
+    Position: Absolute;
+    Left: 0; Top: 0;
+    Width: 80mm;
+    Padding: 10mm;
+    Background: #fff !important;
+    Color: #000 !important;
+    Border: 2px Solid #000;
+    Text-align: Center;
+  }
+}
