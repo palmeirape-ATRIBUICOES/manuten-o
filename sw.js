@@ -2,7 +2,7 @@
    SERVICE WORKER - NETWORK-FIRST STRATEGY FOR PWA & MOBILE PHONES
    ========================================================================== */
 
-const CACHE_NAME = 'asset-saas-v2.1.4';
+const CACHE_NAME = 'asset-saas-v2.1.6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

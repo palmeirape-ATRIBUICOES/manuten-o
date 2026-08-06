@@ -55,7 +55,7 @@ export function renderDatabaseConfigView() {
 
       <!-- SQL Migration Script Instructions -->
       <div class="card">
-        <h3 style="margin-bottom: 12px;">📄 Script de Criação das Tabelas PostgreSQL (`schema.sql`)</h3>
+        <h3 style="margin-bottom: 12px;">📄 Script de Criação das Tabelas PostgreSQL (schema.sql)</h3>
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
           Copie o script SQL abaixo e execute-o no <strong>SQL Editor</strong> do seu projeto Supabase para criar as 10 tabelas relacionais com Row Level Security (RLS).
         </p>
