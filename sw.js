@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.2.6 - App Root DOM rename + cleared dummy Supabase URL.
+   v2.2.7 - Restored src/app.js entry point with ?v=2.2.7 cache buster.
    ========================================================================== */
 
 // Install: skip waiting immediately
