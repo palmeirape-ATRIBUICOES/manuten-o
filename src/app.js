@@ -7,7 +7,6 @@ import { CanvasSignaturePad } from './components/canvas-signature.js';
 
 class AppController {
   constructor() {
-    // Navigation Stack for Level-Based Drill Down (missoes-da-loja architecture)
     this.navStack = [];
     this.signaturePad = null;
     this.activeWorkOrder = null;
@@ -25,7 +24,6 @@ class AppController {
     this.pushLevel(this.getLevel0Config());
   }
 
-  // Level Navigation Engine (Max 8 blocks per screen, max 3 clicks to any feature)
   pushLevel(levelConfig) {
     this.navStack.push(levelConfig);
     this.renderCurrentLevel();
@@ -46,7 +44,6 @@ class AppController {
   renderCurrentLevel() {
     const current = this.navStack[this.navStack.length - 1];
 
-    // 1. Render Breadcrumb trail & Back Button
     const btnBack = document.getElementById('btn-nav-back');
     const breadcrumbTrail = document.getElementById('breadcrumb-trail');
 
@@ -61,11 +58,9 @@ class AppController {
       return `<span class="${isLast ? 'active' : ''}">${item.breadcrumbTitle || item.title}</span>`;
     }).join(' <span style="color: var(--text-muted);">/</span> ');
 
-    // 2. Render Level Title & Subtitle
     document.getElementById('level-title').textContent = current.title;
     document.getElementById('level-subtitle').textContent = current.subtitle;
 
-    // 3. Render Blocks or Content View
     const blockGridContainer = document.getElementById('block-grid-container');
     const contentViewContainer = document.getElementById('content-view-container');
 
@@ -74,11 +69,10 @@ class AppController {
       contentViewContainer.style.display = 'none';
       contentViewContainer.innerHTML = '';
 
-      // Enforce the 8-block UX Rule
       const displayBlocks = current.blocks.slice(0, 8);
 
       blockGridContainer.innerHTML = displayBlocks.map(block => `
-        <div class="block-card" data-block-id="${block.id}">
+        <div class="block-card" data-block-id="${block.id}" data-color="${block.color || 'blue'}">
           <div class="block-icon">
             <i data-lucide="${block.icon}"></i>
           </div>
@@ -88,7 +82,6 @@ class AppController {
         </div>
       `).join('');
 
-      // Bind click handlers on blocks
       blockGridContainer.querySelectorAll('.block-card').forEach(card => {
         card.addEventListener('click', () => {
           const blockId = card.getAttribute('data-block-id');
@@ -109,13 +102,12 @@ class AppController {
       }
     }
 
-    // Refresh Lucide Icons
     if (window.lucide) {
       window.lucide.createIcons();
     }
   }
 
-  // Level 0 Configuration (Home Dashboard Blocks - Max 7 blocks)
+  // Level 0: Home Dashboard (Exact Palette Match missoes-da-loja)
   getLevel0Config() {
     return {
       title: "Painel de Módulos Operacionais",
@@ -127,6 +119,7 @@ class AppController {
           title: "Ativos Patrimoniais",
           desc: "Gestão do ciclo de vida, prontuário técnico e QR Codes.",
           icon: "box",
+          color: "blue",
           badge: `${assets.length} Ativos`,
           badgeClass: "badge-info",
           onClick: () => this.pushLevel(this.getAssetsLevel1Config())
@@ -136,6 +129,7 @@ class AppController {
           title: "Ordens de Serviço",
           desc: "Manutenções preventivas, corretivas, checklists e evidências.",
           icon: "wrench",
+          color: "amber",
           badge: `${workOrders.filter(w => w.status !== 'FINISHED').length} Ativas`,
           badgeClass: "badge-warning",
           onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
@@ -145,6 +139,7 @@ class AppController {
           title: "Leitor de QR Code",
           desc: "Escaneamento de etiqueta física em campo via câmera.",
           icon: "qr-code",
+          color: "emerald",
           badge: "PWA Campo",
           badgeClass: "badge-success",
           onClick: () => this.pushLevel(this.getQRScannerLevel1Config())
@@ -154,6 +149,7 @@ class AppController {
           title: "Financeiro & Peças",
           desc: "Estoque de peças, faturamento por cliente e garantias.",
           icon: "dollar-sign",
+          color: "purple",
           badge: "Faturamento",
           badgeClass: "badge-success",
           onClick: () => this.pushLevel(this.getFinancialLevel1Config())
@@ -163,6 +159,7 @@ class AppController {
           title: "IA & Predição",
           desc: "Análise preditiva de risco de falhas e auditoria por visão.",
           icon: "sparkles",
+          color: "pink",
           badge: "IA Active",
           badgeClass: "badge-info",
           onClick: () => this.pushLevel(this.getAILevel1Config())
@@ -172,6 +169,7 @@ class AppController {
           title: "Clientes & Locais",
           desc: "Cadastro de clientes, filiais e parques de equipamentos.",
           icon: "building-2",
+          color: "cyan",
           badge: `${customers.length} Clientes`,
           badgeClass: "badge-info",
           onClick: () => this.pushLevel(this.getCustomersLevel1Config())
@@ -181,6 +179,7 @@ class AppController {
           title: "Configurações",
           desc: "Plano SaaS, permissões RBAC e regras de SLA.",
           icon: "settings",
+          color: "blue",
           badge: "Professional",
           badgeClass: "badge-info",
           onClick: () => this.pushLevel(this.getSettingsLevel1Config())
@@ -189,7 +188,7 @@ class AppController {
     };
   }
 
-  // Level 1: Ativos Sub-menu (Max 4 blocks)
+  // Level 1: Assets Sub-menu
   getAssetsLevel1Config() {
     return {
       title: "Módulo de Ativos Patrimoniais",
@@ -201,6 +200,7 @@ class AppController {
           title: "Cadastrar Novo Ativo",
           desc: "Registrar equipamento, categoria, cliente e gerar QR Code.",
           icon: "plus-circle",
+          color: "emerald",
           badge: "Novo",
           onClick: () => document.getElementById('modal-add-asset').classList.add('active')
         },
@@ -209,6 +209,7 @@ class AppController {
           title: "Buscar & Listar Ativos",
           desc: "Visualizar todos os ativos em grade com busca e prontuário.",
           icon: "search",
+          color: "blue",
           badge: `${assets.length} Itens`,
           onClick: () => this.pushLevel(this.getAssetsListContentView())
         },
@@ -217,6 +218,7 @@ class AppController {
           title: "Ativos em Manutenção",
           desc: "Equipamentos que apresentam falhas ou estão sob intervenção.",
           icon: "alert-triangle",
+          color: "amber",
           badge: `${assets.filter(a => a.status === 'MAINTENANCE').length} Em Alerta`,
           badgeClass: "badge-danger",
           onClick: () => this.pushLevel(this.getAssetsFilteredContentView('MAINTENANCE'))
@@ -226,13 +228,14 @@ class AppController {
           title: "Etiquetas de QR Code",
           desc: "Gerar e imprimir etiquetas térmicas de QR Code em lote.",
           icon: "printer",
+          color: "purple",
           onClick: () => window.print()
         }
       ]
     };
   }
 
-  // Level 1: Ordens de Serviço Sub-menu (Max 4 blocks)
+  // Level 1: Work Orders Sub-menu
   getWorkOrdersLevel1Config() {
     return {
       title: "Módulo de Ordens de Serviço",
@@ -244,6 +247,7 @@ class AppController {
           title: "Nova Ordem de Serviço",
           desc: "Abertura rápida de OS corretiva ou preventiva.",
           icon: "file-plus",
+          color: "emerald",
           onClick: () => alert("Para abrir uma nova OS, selecione um Ativo no módulo de Ativos ou escaneie o QR Code.")
         },
         {
@@ -251,6 +255,7 @@ class AppController {
           title: "OSs em Andamento",
           desc: "Atendimentos que estão sendo executados por técnicos em campo.",
           icon: "clock",
+          color: "amber",
           badge: `${workOrders.filter(w => w.status !== 'FINISHED').length} Abertas`,
           badgeClass: "badge-warning",
           onClick: () => this.pushLevel(this.getWorkOrdersContentView('IN_PROGRESS'))
@@ -260,6 +265,7 @@ class AppController {
           title: "OSs Concluídas & Laudos",
           desc: "Histórico de serviços finalizados com fotos e assinatura.",
           icon: "check-circle-2",
+          color: "blue",
           badge: `${workOrders.filter(w => w.status === 'FINISHED').length} Concluídas`,
           badgeClass: "badge-success",
           onClick: () => this.pushLevel(this.getWorkOrdersContentView('FINISHED'))
@@ -268,7 +274,7 @@ class AppController {
     };
   }
 
-  // Level 1: Financial Sub-menu (Max 4 blocks)
+  // Level 1: Financial Sub-menu
   getFinancialLevel1Config() {
     return {
       title: "Módulo Financeiro & Estoque de Peças",
@@ -280,6 +286,7 @@ class AppController {
           title: "Estoque de Peças",
           desc: "Consultar catálogo de peças, insumos e estoque nas vans.",
           icon: "package",
+          color: "blue",
           badge: `${partsInventory.length} Peças`,
           onClick: () => this.pushLevel(this.getPartsInventoryContentView())
         },
@@ -288,6 +295,7 @@ class AppController {
           title: "Faturamento por Cliente",
           desc: "Resumo de contratos mensais, mão de obra e peças aplicadas.",
           icon: "file-text",
+          color: "emerald",
           badge: "R$ 10.140,00",
           badgeClass: "badge-success",
           onClick: () => this.pushLevel(this.getClientBillingContentView())
@@ -297,13 +305,14 @@ class AppController {
           title: "Cadastrar Nova Peça",
           desc: "Adicionar componente ou insumo ao almoxarifado.",
           icon: "package-plus",
+          color: "purple",
           onClick: () => document.getElementById('modal-add-part').classList.add('active')
         }
       ]
     };
   }
 
-  // Level 1: AI Sub-menu (Max 3 blocks)
+  // Level 1: AI Sub-menu
   getAILevel1Config() {
     return {
       title: "Módulo de IA & Predição de Falhas",
@@ -315,6 +324,7 @@ class AppController {
           title: "Matriz Preditiva de Falhas",
           desc: "Ativos sob risco iminente de quebra nos próximos 30 dias.",
           icon: "alert-octagon",
+          color: "pink",
           badge: `${aiInsights.length} Alertas`,
           badgeClass: "badge-danger",
           onClick: () => this.pushLevel(this.getAIPredictiveContentView())
@@ -324,6 +334,7 @@ class AppController {
           title: "Assistente Inteligente IA",
           desc: "Consultas interativas em linguagem natural sobre o parque.",
           icon: "bot",
+          color: "cyan",
           badge: "Smart Query",
           onClick: () => this.pushLevel(this.getAIAssistantContentView())
         }
@@ -340,7 +351,7 @@ class AppController {
       renderContent: () => `
         <div style="max-width: 600px; margin: 0 auto; text-align: center;">
           <div class="card" style="padding: 36px; border: 2px dashed var(--primary);">
-            <div style="width: 100%; height: 240px; background-color: #0b1120; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative;">
+            <div style="width: 100%; height: 240px; background-color: var(--bg-primary); border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative;">
               <i data-lucide="qr-code" style="font-size: 4rem; color: var(--primary);"></i>
               <div style="font-size: 0.9rem; color: var(--text-muted);">Câmera PWA ativa. Enquadre a etiqueta...</div>
               <div style="position: absolute; width: 80%; height: 2px; background: var(--primary); box-shadow: 0 0 12px var(--primary); animation: scanAnimation 2s infinite linear;"></div>
@@ -403,7 +414,7 @@ class AppController {
     };
   }
 
-  // Detailed Content View Generators
+  // Detailed Content Views
   getAssetsListContentView() {
     return {
       title: "Prontuário de Ativos Patrimoniais",
@@ -427,7 +438,7 @@ class AppController {
                 <div><strong>Modelo:</strong> ${a.model}</div>
                 <div><strong>Saúde IA:</strong> <span style="color: ${a.healthIndexScore < 60 ? 'var(--danger)' : 'var(--success)'}; font-weight: 700;">${a.healthIndexScore || 95}%</span></div>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; pt-3; border-top: var(--glass-border);">
+              <div style="display: flex; justify-content: space-between; align-items: center; pt-3; border-top: 1px solid var(--border-color);">
                 <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">${a.qrCodeHash}</span>
                 <button class="btn btn-secondary btn-icon"><i data-lucide="file-text"></i></button>
               </div>
@@ -639,34 +650,24 @@ class AppController {
     };
   }
 
-  // Setup Global Events & Navigation Stack
+  // Setup Handlers
   setupGlobalEvents() {
-    // Topbar Home Click
     const btnHome = document.getElementById('btn-go-home');
-    if (btnHome) {
-      btnHome.addEventListener('click', () => this.resetToHome());
-    }
+    if (btnHome) btnHome.addEventListener('click', () => this.resetToHome());
 
-    // Back Button Click
     const btnBack = document.getElementById('btn-nav-back');
-    if (btnBack) {
-      btnBack.addEventListener('click', () => this.popLevel());
-    }
+    if (btnBack) btnBack.addEventListener('click', () => this.popLevel());
   }
 
   setupModalHandlers() {
     document.querySelectorAll('.btn-close-modal').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.modal-overlay').forEach(modal => {
-          modal.classList.remove('active');
-        });
+        document.querySelectorAll('.modal-overlay').forEach(modal => modal.classList.remove('active'));
       });
     });
 
     const btnPrintQr = document.getElementById('btn-print-qr-modal');
-    if (btnPrintQr) {
-      btnPrintQr.addEventListener('click', () => window.print());
-    }
+    if (btnPrintQr) btnPrintQr.addEventListener('click', () => window.print());
   }
 
   setupSignaturePad() {
