@@ -1,21 +1,21 @@
-import { CanvasSignaturePad } from './components/canvas-signature.js';
-import { authService } from './services/auth-service.js';
-import { subscriptionService } from './services/subscription-service.js';
-import { billingService } from './services/billing-service.js';
-import { tenantDataService } from './services/tenant-data-service.js';
-import { renderLandingPage } from './views/landing-page.js';
-import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js';
-import { renderSubscriptionManagementPage } from './views/subscription-page.js';
-import { NewServiceWizard } from './views/new-service-wizard.js';
-import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
-import { offlineSyncQueue } from './mock-data.js';
+import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.2.7';
+import { authService } from './services/auth-service.js?v=2.2.7';
+import { subscriptionService } from './services/subscription-service.js?v=2.2.7';
+import { billingService } from './services/billing-service.js?v=2.2.7';
+import { tenantDataService } from './services/tenant-data-service.js?v=2.2.7';
+import { renderLandingPage } from './views/landing-page.js?v=2.2.7';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.2.7';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.2.7';
+import { NewServiceWizard } from './views/new-service-wizard.js?v=2.2.7';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.2.7';
+import { offlineSyncQueue } from './mock-data.js?v=2.2.7';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
 let _dbConfigModule = null;
 async function loadDbConfigModule() {
   if (!_dbConfigModule) {
     try {
-      _dbConfigModule = await import('./views/database-config-view.js');
+      _dbConfigModule = await import('./views/database-config-view.js?v=2.2.7');
     } catch (e) {
       console.warn('[App] Failed to load database-config-view:', e);
       _dbConfigModule = {
