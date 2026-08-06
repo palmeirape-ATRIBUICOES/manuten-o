@@ -1,173 +1,1001 @@
-/* ==========================================================================
-   APP MAIN CONTROLLER - SAAS ASSET MANAGEMENT (SPRINT 3 AI INCLUDED)
-   ========================================================================== */
-
-import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights } from './mock-data.js';
 import { CanvasSignaturePad } from './components/canvas-signature.js';
+import { authService } from './services/auth-service.js';
+import { subscriptionService } from './services/subscription-service.js';
+import { billingService } from './services/billing-service.js';
+import { tenantDataService } from './services/tenant-data-service.js';
+import { renderLandingPage } from './views/landing-page.js';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js';
+import { NewServiceWizard } from './views/new-service-wizard.js';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
+import { offlineSyncQueue } from './mock-data.js';
+
+// database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
+let _dbConfigModule = null;
+async function loadDbConfigModule() {
+  if (!_dbConfigModule) {
+    try {
+      _dbConfigModule = await import('./views/database-config-view.js');
+    } catch (e) {
+      console.warn('[App] Failed to load database-config-view:', e);
+      _dbConfigModule = {
+        renderDatabaseConfigView: () => '<div class="card"><h3>Erro ao carregar módulo do banco de dados. Limpe o cache do navegador.</h3></div>',
+        attachDatabaseConfigEvents: () => {}
+      };
+    }
+  }
+  return _dbConfigModule;
+}
 
 class AppController {
   constructor() {
-    this.currentView = 'dashboard';
+    console.log('[AppController] Constructor chamado...');
+    this.navStack = [];
     this.signaturePad = null;
     this.activeWorkOrder = null;
+    this.isOnline = navigator.onLine;
+
+    this.currentViewMode = 'PUBLIC_LANDING';
+    this.wizardInstance = null;
 
     this.init();
   }
 
   init() {
-    this.setupNavigation();
-    this.setupModalHandlers();
-    this.setupSignaturePad();
-    this.setupAssetForm();
-    this.setupPartForm();
-    this.setupAIQuery();
-    this.setupQuickScan();
-    this.renderAll();
+    console.log('[AppController] init() chamado...');
+    try {
+      this.setupGlobalEvents();
+      this.setupNetworkStatusListener();
+      this.setupModalHandlers();
+      this.setupSignaturePad();
+      this.setupForms();
 
-    // Refresh icons
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
-  }
-
-  // SPA Navigation Router
-  setupNavigation() {
-    const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
-    navItems.forEach(item => {
-      item.addEventListener('click', () => {
-        const viewTarget = item.getAttribute('data-view');
-        this.switchView(viewTarget);
-      });
-    });
-  }
-
-  switchView(viewName) {
-    this.currentView = viewName;
-
-    // Update active nav item
-    document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
-      if (item.getAttribute('data-view') === viewName) {
-        item.classList.add('active');
-      } else {
-        item.classList.remove('active');
+      const user = authService.getCurrentUser();
+      if (user) {
+        this.currentViewMode = 'ADMIN_PANEL';
       }
-    });
 
-    // Hide all views, show targeted view
-    document.querySelectorAll('.app-view').forEach(view => {
-      view.style.display = 'none';
-    });
-
-    const targetViewEl = document.getElementById(`view-${viewName}`);
-    if (targetViewEl) {
-      targetViewEl.style.display = 'block';
-    }
-
-    if (window.lucide) {
-      window.lucide.createIcons();
+      console.log('[AppController] Chamando renderRouterView...');
+      this.renderRouterView();
+    } catch (err) {
+      console.error('[AppController] Erro no init():', err);
     }
   }
 
-  // Modal Controllers
-  setupModalHandlers() {
-    // Close modal buttons
-    document.querySelectorAll('.btn-close-modal').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.modal-overlay').forEach(modal => {
-          modal.classList.remove('active');
-        });
-      });
-    });
-
-    // Open add asset modal
-    const btnAddAsset = document.getElementById('btn-add-asset');
-    if (btnAddAsset) {
-      btnAddAsset.addEventListener('click', () => {
-        document.getElementById('modal-add-asset').classList.add('active');
-      });
-    }
-
-    // Open add part modal
-    const btnAddPart = document.getElementById('btn-add-part');
-    if (btnAddPart) {
-      btnAddPart.addEventListener('click', () => {
-        document.getElementById('modal-add-part').classList.add('active');
-      });
-    }
-
-    // Quick OS Button
-    const btnQuickOs = document.getElementById('btn-quick-os');
-    if (btnQuickOs) {
-      btnQuickOs.addEventListener('click', () => {
-        this.switchView('work-orders');
-      });
-    }
-
-    // Print QR Button in detail modal
-    const btnPrintQr = document.getElementById('btn-print-qr-modal');
-    if (btnPrintQr) {
-      btnPrintQr.addEventListener('click', () => {
-        window.print();
-      });
-    }
+  getActiveTenantData() {
+    const user = authService.getCurrentUser();
+    const tenantId = user ? user.tenantId : 'tenant-alfa-001';
+    return tenantDataService.getTenantData(tenantId);
   }
 
-  // Canvas Signature Pad Initialization
-  setupSignaturePad() {
-    const canvasEl = document.getElementById('signature-canvas');
-    if (canvasEl) {
-      this.signaturePad = new CanvasSignaturePad(canvasEl);
+  startNewServiceWizard() {
+    const user = authService.getCurrentUser();
+    if (user && subscriptionService.isAccessBlocked(user.tenantId)) {
+      alert("Seu período gratuito de 30 dias terminou. Escolha um plano para cadastrar novos serviços.");
+      this.pushLevel(this.getSubscriptionManagementLevel1Config());
+      return;
+    }
 
-      const btnClear = document.getElementById('btn-clear-signature');
-      if (btnClear) {
-        btnClear.addEventListener('click', () => {
-          this.signaturePad.clear();
+    this.wizardInstance = new NewServiceWizard(
+      (createdServiceId) => {
+        const tenantId = user ? user.tenantId : 'tenant-alfa-001';
+        this.pushLevel({
+          title: "Detalhamento do Serviço",
+          breadcrumbTitle: "Ver Serviço",
+          renderContent: () => renderServiceDetailView(createdServiceId),
+          onContentLoaded: () => attachServiceDetailEvents(tenantId, createdServiceId, () => this.renderCurrentLevel())
         });
+      },
+      () => {
+        this.resetToHome();
       }
-    }
+    );
 
-    // Simular upload de foto "Depois" com auditoria por IA
-    const boxAfterPhoto = document.getElementById('box-after-photo');
-    if (boxAfterPhoto) {
-      boxAfterPhoto.addEventListener('click', () => {
-        boxAfterPhoto.innerHTML = `
-          <div style="position: relative;">
-            <img src="https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=300&auto=format&fit=crop&q=60" style="width: 100%; height: 120px; object-fit: cover; border-radius: var(--radius-sm);">
-            <span class="badge badge-success" style="position: absolute; bottom: 6px; right: 6px; font-size: 0.65rem;">
-              ✓ IA Auditado 98.4%
-            </span>
+    this.pushLevel({
+      title: "Novo Serviço — Assistente Guiado",
+      breadcrumbTitle: "Novo Serviço",
+      renderContent: () => this.wizardInstance.render(),
+      onContentLoaded: () => this.wizardInstance.attachEvents()
+    });
+  }
+
+  renderRouterView() {
+    const publicContainer = document.getElementById('public-view-container');
+    const privateContainer = document.getElementById('private-view-container');
+    const trialBannerContainer = document.getElementById('trial-banner-container');
+    const topbarRight = document.getElementById('header-topbar-right');
+    const companyTitleEl = document.getElementById('header-company-name');
+
+    const currentUser = authService.getCurrentUser();
+
+    if (this.currentViewMode === 'ADMIN_PANEL' && currentUser) {
+      publicContainer.style.display = 'none';
+      publicContainer.innerHTML = '';
+      privateContainer.style.display = 'block';
+
+      const tenant = authService.getTenantById(currentUser.tenantId) || { name: currentUser.companyName || "Sua Empresa" };
+      const sub = subscriptionService.getTenantSubscription(currentUser.tenantId);
+      const trialConfig = subscriptionService.getTrialBannerConfig(sub);
+      const tenantData = this.getActiveTenantData() || {};
+
+      companyTitleEl.textContent = tenant.name;
+
+      // Safe arrays
+      const servicesList = tenantData.services || [];
+      const clientsList = tenantData.clients || [];
+      const equipmentList = tenantData.equipment || [];
+
+      // Update KPI Row values
+      const kpiRow = document.getElementById('kpi-summary-row');
+      if (kpiRow) {
+        const totalCost = servicesList.reduce((acc, w) => acc + (w.totalCost || 0), 0);
+        kpiRow.innerHTML = `
+          <div class="kpi-card">
+            <div class="kpi-label">FATURAMENTO MÊS</div>
+            <div class="kpi-value" style="color: #10b981;">R$ ${totalCost.toFixed(2)}</div>
+            <div class="kpi-sub">${servicesList.length} Serviços Registrados</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">CLIENTES & ATIVOS</div>
+            <div class="kpi-value" style="color: #6366f1;">${clientsList.length}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${equipmentList.length} equipamentos</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">EQUIPE EM CAMPO</div>
+            <div class="kpi-value">1</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${currentUser.fullName || 'Admin'}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">ASSINATURA SAAS</div>
+            <div class="kpi-value" style="color: ${sub.remainingDays <= 3 ? 'var(--danger)' : '#3b82f6'};">${sub.remainingDays} dias</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${sub.subscriptionStatus === 'trial' ? 'período gratuito' : 'assinatura ativa'}</div>
           </div>
         `;
+      }
+
+      // Render Trial Top Banner
+      if (trialConfig) {
+        trialBannerContainer.innerHTML = `
+          <div class="trial-banner" style="${trialConfig.messageStyle}">
+            <span>💡 <strong>Aviso de Teste Grátis:</strong> ${trialConfig.text}</span>
+            <button class="btn-trial-action" id="btn-trial-upgrade-now">Conhecer Planos</button>
+          </div>
+        `;
+        document.getElementById('btn-trial-upgrade-now').addEventListener('click', () => {
+          this.pushLevel(this.getSubscriptionManagementLevel1Config());
+        });
+      } else {
+        trialBannerContainer.innerHTML = '';
+      }
+
+      // Update Topbar Right
+      topbarRight.innerHTML = `
+        <div class="tenant-pill" id="pwa-status-pill">
+          <i data-lucide="wifi"></i> <span>ONLINE</span>
+        </div>
+        <div class="tenant-pill" style="background-color: #f1f5f9; color: #334155;">
+          🏢 ${tenant.name}
+        </div>
+        <div class="user-role-badge">
+          <span>👑 ${currentUser.fullName}</span>
+        </div>
+        <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.85rem;" id="btn-app-logout">
+          Sair
+        </button>
+      `;
+
+      document.getElementById('btn-app-logout').addEventListener('click', () => {
+        authService.logout();
+        this.currentViewMode = 'PUBLIC_LANDING';
+        this.renderRouterView();
+      });
+
+      // If expired, auto-redirect to subscription block
+      if (sub.subscriptionStatus === 'expired' || sub.subscriptionStatus === 'blocked') {
+        this.navStack = [];
+        this.pushLevel(this.getSubscriptionManagementLevel1Config());
+      } else if (this.navStack.length === 0) {
+        this.pushLevel(this.getLevel0Config());
+      } else {
+        this.renderCurrentLevel();
+      }
+
+    } else {
+      // Public Views
+      privateContainer.style.display = 'none';
+      trialBannerContainer.innerHTML = '';
+      publicContainer.style.display = 'block';
+
+      companyTitleEl.textContent = "Plataforma de Manutenção & Ativos";
+
+      topbarRight.innerHTML = `
+        <button class="btn btn-secondary" id="btn-top-login">Entrar</button>
+        <button class="btn btn-primary" id="btn-top-register">Começar Teste Grátis</button>
+      `;
+
+      document.getElementById('btn-top-login').addEventListener('click', () => {
+        this.currentViewMode = 'LOGIN';
+        this.renderRouterView();
+      });
+
+      document.getElementById('btn-top-register').addEventListener('click', () => {
+        this.currentViewMode = 'REGISTER';
+        this.renderRouterView();
+      });
+
+      if (this.currentViewMode === 'REGISTER') {
+        publicContainer.innerHTML = renderRegisterPage();
+        this.attachRegisterFormEvents();
+      } else if (this.currentViewMode === 'LOGIN') {
+        publicContainer.innerHTML = renderLoginPage();
+        this.attachLoginFormEvents();
+      } else if (this.currentViewMode === 'FORGOT') {
+        publicContainer.innerHTML = renderForgotPasswordPage();
+        this.attachForgotPasswordEvents();
+      } else {
+        publicContainer.innerHTML = renderLandingPage();
+        this.attachLandingPageEvents();
+      }
+    }
+
+    const appStatusEl = document.getElementById('debug-app-status');
+    if (appStatusEl) appStatusEl.textContent = `v2.2.4 (${this.currentViewMode})`;
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  }
+
+  attachLandingPageEvents() {
+    const btnHeroTrial = document.getElementById('btn-hero-trial');
+    const btnHeroLogin = document.getElementById('btn-hero-login');
+
+    if (btnHeroTrial) {
+      btnHeroTrial.addEventListener('click', () => {
+        this.currentViewMode = 'REGISTER';
+        this.renderRouterView();
       });
     }
 
-    // Encerramento da OS
-    const btnFinishOs = document.getElementById('btn-finish-os-submit');
-    if (btnFinishOs) {
-      btnFinishOs.addEventListener('click', () => {
-        if (this.activeWorkOrder) {
-          this.activeWorkOrder.status = 'FINISHED';
-          this.activeWorkOrder.aiAudit = {
-            isAudited: true,
-            confidence: 98.4,
-            detectedTag: this.activeWorkOrder.assetTag,
-            photoVerified: true,
-            notes: "Visão computacional confirmou serviço finalizado com conformidade técnica."
-          };
-          alert(`Ordem de Serviço ${this.activeWorkOrder.osNumber} concluída com sucesso! Evidência visual auditada pela IA (Acurácia: 98.4%).`);
-          document.getElementById('modal-os-exec').classList.remove('active');
-          this.renderAll();
+    if (btnHeroLogin) {
+      btnHeroLogin.addEventListener('click', () => {
+        this.currentViewMode = 'LOGIN';
+        this.renderRouterView();
+      });
+    }
+
+    document.querySelectorAll('.btn-choose-plan').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.currentViewMode = 'REGISTER';
+        this.renderRouterView();
+      });
+    });
+  }
+
+  attachRegisterFormEvents() {
+    const form = document.getElementById('form-register');
+    const errBox = document.getElementById('register-error-box');
+    const linkLogin = document.getElementById('link-go-login');
+
+    if (linkLogin) {
+      linkLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.currentViewMode = 'LOGIN';
+        this.renderRouterView();
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        errBox.style.display = 'none';
+
+        const fullName = document.getElementById('reg-fullname').value.trim();
+        const companyName = document.getElementById('reg-company').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const confirmPassword = document.getElementById('reg-confirm-password').value;
+
+        if (password !== confirmPassword) {
+          errBox.style.display = 'block';
+          errBox.textContent = "As senhas não coincidem. Digite novamente.";
+          return;
+        }
+
+        try {
+          authService.registerUser({ fullName, companyName, email, phone, password });
+          alert(`Conta criada com sucesso para ${companyName}! Seu espaço de trabalho está limpo e pronto.`);
+          this.currentViewMode = 'ADMIN_PANEL';
+          this.navStack = [];
+          this.renderRouterView();
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.textContent = err.message;
         }
       });
     }
   }
 
-  // Add Asset Form Handler
-  setupAssetForm() {
-    const form = document.getElementById('form-add-asset');
+  attachLoginFormEvents() {
+    const form = document.getElementById('form-login');
+    const errBox = document.getElementById('login-error-box');
+    const linkReg = document.getElementById('link-go-register');
+    const linkForgot = document.getElementById('link-forgot-password');
+
+    if (linkReg) {
+      linkReg.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.currentViewMode = 'REGISTER';
+        this.renderRouterView();
+      });
+    }
+
+    if (linkForgot) {
+      linkForgot.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.currentViewMode = 'FORGOT';
+        this.renderRouterView();
+      });
+    }
+
     if (form) {
       form.addEventListener('submit', (e) => {
         e.preventDefault();
+        errBox.style.display = 'none';
+
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        try {
+          authService.login(email, password);
+          this.currentViewMode = 'ADMIN_PANEL';
+          this.navStack = [];
+          this.renderRouterView();
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.textContent = err.message;
+        }
+      });
+    }
+  }
+
+  attachForgotPasswordEvents() {
+    const form = document.getElementById('form-forgot');
+    const msgBox = document.getElementById('forgot-msg-box');
+    const linkBack = document.getElementById('link-back-login');
+
+    if (linkBack) {
+      linkBack.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.currentViewMode = 'LOGIN';
+        this.renderRouterView();
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('forgot-email').value.trim();
+        try {
+          const msg = authService.recoverPassword(email);
+          msgBox.style.display = 'block';
+          msgBox.style.backgroundColor = '#ecfdf5';
+          msgBox.style.color = '#065f46';
+          msgBox.textContent = msg;
+        } catch (err) {
+          msgBox.style.display = 'block';
+          msgBox.style.backgroundColor = '#fef2f2';
+          msgBox.style.color = '#991b1b';
+          msgBox.textContent = err.message;
+        }
+      });
+    }
+  }
+
+  setupNetworkStatusListener() {
+    const updatePill = () => {
+      this.isOnline = navigator.onLine;
+      const pill = document.getElementById('pwa-status-pill');
+      if (!pill) return;
+
+      if (this.isOnline) {
+        pill.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+        pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        pill.style.color = '#059669';
+        pill.innerHTML = `<i data-lucide="wifi"></i> <span>ONLINE</span>`;
+      } else {
+        pill.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+        pill.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        pill.style.color = '#d97706';
+        pill.innerHTML = `<i data-lucide="wifi-off"></i> <span>MODO OFFLINE</span>`;
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    window.addEventListener('online', updatePill);
+    window.addEventListener('offline', updatePill);
+  }
+
+  pushLevel(levelConfig) {
+    this.navStack.push(levelConfig);
+    this.renderCurrentLevel();
+  }
+
+  popLevel() {
+    if (this.navStack.length > 1) {
+      this.navStack.pop();
+      this.renderCurrentLevel();
+    }
+  }
+
+  resetToHome() {
+    if (this.currentViewMode !== 'ADMIN_PANEL') {
+      this.currentViewMode = 'PUBLIC_LANDING';
+      this.renderRouterView();
+      return;
+    }
+    this.navStack = [this.getLevel0Config()];
+    this.renderCurrentLevel();
+  }
+
+  renderCurrentLevel() {
+    if (this.navStack.length === 0) return;
+
+    const current = this.navStack[this.navStack.length - 1];
+
+    const navBar = document.getElementById('navigation-bar');
+    const kpiRow = document.getElementById('kpi-summary-row');
+    const sectionHeading = document.getElementById('section-heading');
+    const btnBack = document.getElementById('btn-nav-back');
+    const breadcrumbTrail = document.getElementById('breadcrumb-trail');
+
+    if (this.navStack.length > 1) {
+      navBar.style.display = 'flex';
+      btnBack.style.display = 'inline-flex';
+      kpiRow.style.display = 'none';
+      sectionHeading.textContent = current.title.toUpperCase();
+    } else {
+      navBar.style.display = 'none';
+      btnBack.style.display = 'none';
+      kpiRow.style.display = 'grid';
+      sectionHeading.textContent = "MÓDULOS OPERACIONAIS";
+    }
+
+    breadcrumbTrail.innerHTML = this.navStack.map((item, index) => {
+      const isLast = index === this.navStack.length - 1;
+      return `<span class="${isLast ? 'active' : ''}">${item.breadcrumbTitle || item.title}</span>`;
+    }).join(' <span style="color: var(--text-muted);">/</span> ');
+
+    const blockGridContainer = document.getElementById('block-grid-container');
+    const contentViewContainer = document.getElementById('content-view-container');
+
+    if (current.blocks && current.blocks.length > 0) {
+      blockGridContainer.style.display = 'grid';
+      contentViewContainer.style.display = 'none';
+      contentViewContainer.innerHTML = '';
+
+      // Prominent '+ Novo serviço' Bar on Level 0
+      let topActionBarHTML = '';
+      if (this.navStack.length === 1) {
+        topActionBarHTML = `
+          <div class="main-new-service-bar" style="grid-column: 1 / -1;">
+            <button class="btn-main-new-service" id="btn-home-main-new-service">
+              <i data-lucide="plus-circle" style="font-size: 1.4rem;"></i>
+              <span>+ Novo serviço</span>
+            </button>
+          </div>
+        `;
+      }
+
+      const displayBlocks = current.blocks.slice(0, 8);
+
+      blockGridContainer.innerHTML = topActionBarHTML + displayBlocks.map(block => `
+        <div class="block-card" data-block-id="${block.id}">
+          ${block.badge ? `<div class="notification-badge">${block.badge}</div>` : ''}
+          <div class="block-icon-box ${block.iconBgClass || 'icon-box-emerald'}">
+            <i data-lucide="${block.icon}"></i>
+          </div>
+          <div class="block-card-title">${block.title}</div>
+          ${block.desc ? `<div class="block-card-desc">${block.desc}</div>` : ''}
+        </div>
+      `).join('');
+
+      const btnHomeNew = document.getElementById('btn-home-main-new-service');
+      if (btnHomeNew) {
+        btnHomeNew.addEventListener('click', () => this.startNewServiceWizard());
+      }
+
+      blockGridContainer.querySelectorAll('.block-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const blockId = card.getAttribute('data-block-id');
+          const targetBlock = displayBlocks.find(b => b.id === blockId);
+          if (targetBlock && targetBlock.onClick) {
+            targetBlock.onClick();
+          }
+        });
+      });
+
+    } else if (current.renderContent) {
+      blockGridContainer.style.display = 'none';
+      contentViewContainer.style.display = 'block';
+      contentViewContainer.innerHTML = current.renderContent();
+
+      if (current.onContentLoaded) {
+        current.onContentLoaded();
+      }
+    }
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  }
+
+  // Level 0: Home Dashboard
+  getLevel0Config() {
+    const user = authService.getCurrentUser();
+    const sub = user ? subscriptionService.getTenantSubscription(user.tenantId) : null;
+    const tenantData = this.getActiveTenantData();
+
+    return {
+      title: "Painel do Gestor",
+      subtitle: "Módulos de gestão de ativos e serviços",
+      breadcrumbTitle: "Painel Principal",
+      blocks: [
+        {
+          id: "mod-new-service-btn",
+          title: "+ Novo serviço",
+          desc: "Fluxo curto guiado em 4 etapas",
+          icon: "plus-circle",
+          iconBgClass: "icon-box-emerald",
+          badge: "Novo",
+          onClick: () => this.startNewServiceWizard()
+        },
+        {
+          id: "mod-database-config",
+          title: "Banco de Dados Cloud",
+          desc: "Supabase PostgreSQL & Sincronização",
+          icon: "database",
+          iconBgClass: "icon-box-emerald",
+          badge: "Cloud",
+          onClick: async () => {
+            const dbMod = await loadDbConfigModule();
+            this.pushLevel({
+              title: "Configuração de Banco de Dados Cloud",
+              breadcrumbTitle: "Banco de Dados",
+              renderContent: () => dbMod.renderDatabaseConfigView(),
+              onContentLoaded: () => dbMod.attachDatabaseConfigEvents()
+            });
+          }
+        },
+        {
+          id: "mod-services-list",
+          title: "Ordens de Serviço",
+          desc: "Visualizar histórico & atendimentos",
+          icon: "wrench",
+          iconBgClass: "icon-box-purple",
+          badge: `${(tenantData.services || []).length}`,
+          onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
+        },
+        {
+          id: "mod-clients-list",
+          title: "Clientes",
+          desc: "Cadastro e parques por cliente",
+          icon: "users",
+          iconBgClass: "icon-box-blue",
+          badge: `${(tenantData.clients || []).length}`,
+          onClick: () => this.pushLevel(this.getCustomersLevel1Config())
+        },
+        {
+          id: "mod-subscription",
+          title: "Plano e Assinatura",
+          desc: "Período gratuito & gestão de planos",
+          icon: "credit-card",
+          iconBgClass: "icon-box-indigo",
+          badge: sub ? `${sub.remainingDays} dias` : "30 dias",
+          onClick: () => this.pushLevel(this.getSubscriptionManagementLevel1Config())
+        },
+        {
+          id: "mod-assets",
+          title: "Ativos Patrimoniais",
+          desc: "Gestão do ciclo de vida & QR Code",
+          icon: "box",
+          iconBgClass: "icon-box-teal",
+          badge: `${(tenantData.assets || []).length}`,
+          onClick: () => this.pushLevel(this.getAssetsLevel1Config())
+        },
+        {
+          id: "mod-pmoc",
+          title: "PMOC & Preventivas",
+          desc: "Planos de manutenção & laudo sanitário",
+          icon: "calendar-check",
+          iconBgClass: "icon-box-cyan",
+          badge: (tenantData.pmocPlans || []).length > 0 ? "96%" : "0",
+          onClick: () => this.pushLevel(this.getPMOCLevel1Config())
+        },
+        {
+          id: "mod-pwa-offline",
+          title: "PWA & Offline Sync",
+          desc: "Modo sem internet & fila de sincronização",
+          icon: "wifi-off",
+          iconBgClass: "icon-box-amber",
+          badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length}`,
+          onClick: () => this.pushLevel(this.getPWAOfflineLevel1Config())
+        }
+      ]
+    };
+  }
+
+  // Level 1: Subscription Management View
+  getSubscriptionManagementLevel1Config() {
+    const user = authService.getCurrentUser();
+    const tenantId = user ? user.tenantId : "tenant-alfa-001";
+
+    return {
+      title: "Plano e Assinatura SaaS",
+      subtitle: "Gestão do período gratuito de 30 dias e planos contratados.",
+      breadcrumbTitle: "Plano e Assinatura",
+      renderContent: () => renderSubscriptionManagementPage(tenantId),
+      onContentLoaded: () => {
+        document.querySelectorAll('.btn-activate-plan').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const planId = btn.getAttribute('data-plan-id');
+            billingService.processSubscriptionPayment({ tenantId, planId, billingCycle: "MONTHLY" });
+            alert(`✓ Assinatura ativada com sucesso! O plano ${planId.toUpperCase()} já está em vigor.`);
+            this.renderRouterView();
+          });
+        });
+      }
+    };
+  }
+
+  // Level 1: Customers View
+  getCustomersLevel1Config() {
+    const tenantData = this.getActiveTenantData();
+    const clients = tenantData.clients || [];
+
+    return {
+      title: "Clientes Cadastrados",
+      subtitle: "Cadastro simples de clientes e locais de atendimento.",
+      breadcrumbTitle: "Clientes",
+      renderContent: () => {
+        if (clients.length === 0) {
+          return `
+            <div class="card" style="text-align: center; padding: 48px 24px;">
+              <i data-lucide="users" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
+              <h3 style="margin-bottom: 8px;">Nenhum Cliente Cadastrado</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+                Crie um novo serviço para cadastrar seu primeiro cliente de forma guiada.
+              </p>
+              <button class="btn btn-primary" id="btn-client-empty-new-service">
+                <i data-lucide="plus-circle"></i> + Novo Serviço
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            ${clients.map(c => `
+              <div class="card">
+                <h3 style="font-size: 1.1rem; color: #0f172a; margin-bottom: 6px;">${c.name}</h3>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">📞 ${c.phone}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">📍 ${c.address || 'Sem endereço'}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      },
+      onContentLoaded: () => {
+        const btnEmpty = document.getElementById('btn-client-empty-new-service');
+        if (btnEmpty) btnEmpty.addEventListener('click', () => this.startNewServiceWizard());
+      }
+    };
+  }
+
+  // Level 1: Work Orders Sub-menu
+  getWorkOrdersLevel1Config() {
+    const tenantData = this.getActiveTenantData();
+
+    return {
+      title: "Módulo de Ordens de Serviço",
+      subtitle: "Gerencie chamados de campo, preventivas e checklists.",
+      breadcrumbTitle: "Ordens de Serviço",
+      blocks: [
+        {
+          id: "sub-new-service-direct",
+          title: "+ Novo serviço",
+          desc: "Iniciar fluxo curto em 4 etapas",
+          icon: "plus-circle",
+          iconBgClass: "icon-box-emerald",
+          badge: "Novo",
+          onClick: () => this.startNewServiceWizard()
+        },
+        {
+          id: "sub-active-os",
+          title: "Serviços em Andamento",
+          desc: "Atendimentos abertos ou executando",
+          icon: "clock",
+          iconBgClass: "icon-box-amber",
+          badge: `${(tenantData.services || []).filter(w => w.status !== 'Concluído').length}`,
+          onClick: () => this.pushLevel(this.getWorkOrdersContentView('Aberto'))
+        }
+      ]
+    };
+  }
+
+  getWorkOrdersContentView(statusFilter) {
+    const tenantData = this.getActiveTenantData();
+    const services = tenantData.services || [];
+
+    return {
+      title: "Ordens de Serviço",
+      subtitle: "Lista de chamados técnicos e manutenções.",
+      breadcrumbTitle: "Lista de OS",
+      renderContent: () => {
+        if (services.length === 0) {
+          return `
+            <div class="card" style="text-align: center; padding: 48px 24px;">
+              <i data-lucide="wrench" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
+              <h3 style="margin-bottom: 8px;">Nenhuma Ordem de Serviço Encontrada</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+                Clique abaixo para cadastrar seu primeiro serviço.
+              </p>
+              <button class="btn btn-primary" id="btn-os-empty-new-service">
+                <i data-lucide="plus-circle"></i> + Novo Serviço
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Nº Serviço</th><th>Cliente</th><th>Equipamento</th><th>Status</th><th>Ações</th></tr>
+              </thead>
+              <tbody>
+                ${services.map(wo => `
+                  <tr>
+                    <td><strong style="color: var(--primary);">${wo.serviceNumber}</strong></td>
+                    <td>${wo.clientName}</td>
+                    <td>${wo.equipmentBrand || ''} ${wo.equipmentModel || ''}</td>
+                    <td><span class="badge ${wo.status === 'Concluído' ? 'badge-success' : 'badge-info'}">${wo.status}</span></td>
+                    <td>
+                      <button class="btn btn-secondary btn-open-service-detail" data-id="${wo.id}">
+                        <i data-lucide="eye"></i> Ver Serviço
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
+      onContentLoaded: () => {
+        const btnEmpty = document.getElementById('btn-os-empty-new-service');
+        if (btnEmpty) btnEmpty.addEventListener('click', () => this.startNewServiceWizard());
+
+        document.querySelectorAll('.btn-open-service-detail').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const user = authService.getCurrentUser();
+            const tenantId = user ? user.tenantId : 'tenant-alfa-001';
+            this.pushLevel({
+              title: "Detalhamento do Serviço",
+              breadcrumbTitle: "Ver Serviço",
+              renderContent: () => renderServiceDetailView(id),
+              onContentLoaded: () => attachServiceDetailEvents(tenantId, id, () => this.renderCurrentLevel())
+            });
+          });
+        });
+      }
+    };
+  }
+
+  // Level 1: Assets Sub-menu
+  getAssetsLevel1Config() {
+    const tenantData = this.getActiveTenantData();
+
+    return {
+      title: "Módulo de Ativos Patrimoniais",
+      subtitle: "Escolha uma ação para gerenciar o parque tecnológico.",
+      breadcrumbTitle: "Ativos",
+      blocks: [
+        {
+          id: "sub-add-asset",
+          title: "Cadastrar Novo Ativo",
+          desc: "Registrar equipamento & QR Code",
+          icon: "plus-circle",
+          iconBgClass: "icon-box-emerald",
+          badge: "Novo",
+          onClick: () => {
+            const user = authService.getCurrentUser();
+            if (user && subscriptionService.isAccessBlocked(user.tenantId)) {
+              alert("Seu período gratuito de 30 dias terminou. Escolha um plano para cadastrar novos registros.");
+              this.pushLevel(this.getSubscriptionManagementLevel1Config());
+              return;
+            }
+            document.getElementById('modal-add-asset').classList.add('active');
+          }
+        },
+        {
+          id: "sub-list-assets",
+          title: "Buscar & Listar Ativos",
+          desc: "Todos os ativos em grade com prontuário",
+          icon: "search",
+          iconBgClass: "icon-box-blue",
+          badge: `${tenantData.assets.length}`,
+          onClick: () => this.pushLevel(this.getAssetsListContentView())
+        }
+      ]
+    };
+  }
+
+  getAssetsListContentView() {
+    const tenantData = this.getActiveTenantData();
+    const assetsList = tenantData.assets;
+
+    return {
+      title: "Prontuário de Ativos Patrimoniais",
+      subtitle: "Clique em um ativo para acessar seu prontuário digital completo.",
+      breadcrumbTitle: "Lista de Ativos",
+      renderContent: () => {
+        if (assetsList.length === 0) {
+          return `
+            <div class="card" style="text-align: center; padding: 48px 24px;">
+              <i data-lucide="box" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
+              <h3 style="margin-bottom: 8px;">Seu Parque de Ativos está Limpo</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px; margin: 0 auto 24px;">
+                Você ainda não possui nenhum equipamento cadastrado. Clique no botão abaixo para adicionar seu primeiro ativo.
+              </p>
+              <button class="btn btn-primary" id="btn-empty-add-asset">
+                <i data-lucide="plus-circle"></i> Cadastrar Primeiro Ativo
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+            ${assetsList.map(a => `
+              <div class="card asset-card-item" style="cursor: pointer;" data-id="${a.id}">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                  <div>
+                    <h3 style="font-size: 1.1rem; color: #0f172a;">${a.tagName}</h3>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${a.categoryName}</div>
+                  </div>
+                  <span class="badge badge-success">Instalado</span>
+                </div>
+                <div style="font-size: 0.85rem;"><strong>Cliente:</strong> ${a.customerName}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      },
+      onContentLoaded: () => {
+        const btnEmpty = document.getElementById('btn-empty-add-asset');
+        if (btnEmpty) {
+          btnEmpty.addEventListener('click', () => {
+            document.getElementById('modal-add-asset').classList.add('active');
+          });
+        }
+      }
+    };
+  }
+
+  getPMOCLevel1Config() {
+    return {
+      title: "Módulo PMOC & Preventivas",
+      subtitle: "Planos de manutenção.",
+      breadcrumbTitle: "PMOC",
+      renderContent: () => `<div class="card">Módulo PMOC Ativo.</div>`
+    };
+  }
+
+  getPWAOfflineLevel1Config() {
+    return {
+      title: "Modo PWA Offline",
+      subtitle: "Sincronização sem internet.",
+      breadcrumbTitle: "PWA",
+      renderContent: () => `<div class="card">Sincronizador PWA Ativo.</div>`
+    };
+  }
+
+  getAILevel1Config() {
+    return {
+      title: "Módulo IA",
+      subtitle: "Predição por inteligência artificial.",
+      breadcrumbTitle: "IA",
+      renderContent: () => `<div class="card">Assistente IA Ativo.</div>`
+    };
+  }
+
+  getFinancialLevel1Config() {
+    return {
+      title: "Financeiro & Peças",
+      subtitle: "Faturamento e estoque.",
+      breadcrumbTitle: "Financeiro",
+      renderContent: () => `<div class="card">Módulo Financeiro Ativo.</div>`
+    };
+  }
+
+  getQRScannerLevel1Config() {
+    return {
+      title: "Leitor QR Code",
+      subtitle: "Câmera PWA.",
+      breadcrumbTitle: "QR Scanner",
+      renderContent: () => `<div class="card" style="text-align: center; padding: 40px;">Câmera PWA ativa.</div>`
+    };
+  }
+
+  // Setup Global Events & Modals
+  setupGlobalEvents() {
+    const btnHome = document.getElementById('btn-go-home');
+    if (btnHome) btnHome.addEventListener('click', () => this.resetToHome());
+
+    const btnBack = document.getElementById('btn-nav-back');
+    if (btnBack) btnBack.addEventListener('click', () => this.popLevel());
+  }
+
+  setupModalHandlers() {
+    document.querySelectorAll('.btn-close-modal').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.modal-overlay').forEach(modal => modal.classList.remove('active'));
+      });
+    });
+
+    const btnPrintQr = document.getElementById('btn-print-qr-modal');
+    if (btnPrintQr) btnPrintQr.addEventListener('click', () => window.print());
+  }
+
+  setupSignaturePad() {
+    const canvasEl = document.getElementById('signature-canvas');
+    if (canvasEl) {
+      this.signaturePad = new CanvasSignaturePad(canvasEl);
+      const btnClear = document.getElementById('btn-clear-signature');
+      if (btnClear) btnClear.addEventListener('click', () => this.signaturePad.clear());
+    }
+
+    const btnFinishOs = document.getElementById('btn-finish-os-submit');
+    if (btnFinishOs) {
+      btnFinishOs.addEventListener('click', () => {
+        const user = authService.getCurrentUser();
+        if (user && subscriptionService.isAccessBlocked(user.tenantId)) {
+          alert("Seu período gratuito de 30 dias terminou. Escolha um plano para concluir Ordens de Serviço.");
+          document.getElementById('modal-os-exec').classList.remove('active');
+          this.pushLevel(this.getSubscriptionManagementLevel1Config());
+          return;
+        }
+
+        if (this.activeWorkOrder) {
+          this.activeWorkOrder.status = 'FINISHED';
+          alert(`Ordem de Serviço ${this.activeWorkOrder.osNumber} concluída com sucesso! Laudo emitido.`);
+          document.getElementById('modal-os-exec').classList.remove('active');
+          this.renderCurrentLevel();
+        }
+      });
+    }
+  }
+
+  setupForms() {
+    const formAsset = document.getElementById('form-add-asset');
+    if (formAsset) {
+      formAsset.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const user = authService.getCurrentUser();
+        if (user && subscriptionService.isAccessBlocked(user.tenantId)) {
+          alert("Seu período gratuito de 30 dias terminou. Escolha um plano para cadastrar novos registros.");
+          document.getElementById('modal-add-asset').classList.remove('active');
+          this.pushLevel(this.getSubscriptionManagementLevel1Config());
+          return;
+        }
+
         const tag = document.getElementById('new-asset-tag').value;
         const categoryId = document.getElementById('new-asset-category').value;
         const customerId = document.getElementById('new-asset-customer').value;
@@ -179,386 +1007,24 @@ class AppController {
           tagName: tag,
           qrCodeHash: `QR-${tag}-ALFA`,
           categoryId: categoryId,
-          categoryName: categoryId === 'cat-gen' ? 'Geradores & Energia' : 'HVAC & Climatização',
+          categoryName: 'Equipamento Geral',
           customerId: customerId,
-          customerName: customerId === 'cust-001' ? 'Hospital Central São Lucas' : 'Condomínio Torre Sul',
+          customerName: 'Cliente Cadastrado',
           locationName: 'Local Principal',
           model: model,
           serialNumber: serial,
           status: 'INSTALLED',
-          criticality: 'MEDIUM',
-          healthIndexScore: 98,
-          mtbfHours: 600,
-          mttrHours: 2.0,
-          installationDate: new Date().toISOString().split('T')[0],
-          totalMaintenanceCost: 0,
-          installedPartsHistory: [],
-          history: [
-            { date: new Date().toISOString().split('T')[0], type: 'INSTALLATION', text: 'Ativo registrado e QR Code gerado.' }
-          ]
+          history: [{ date: new Date().toISOString().split('T')[0], type: 'INSTALLATION', text: 'Ativo cadastrado.' }]
         };
 
-        assets.unshift(newAsset);
+        tenantDataService.addAsset(user.tenantId, newAsset);
+
         document.getElementById('modal-add-asset').classList.remove('active');
-        form.reset();
-        this.renderAll();
-        alert(`Ativo ${tag} cadastrado com sucesso! Índices de saúde preditiva ativos.`);
+        formAsset.reset();
+        this.renderRouterView();
+        alert(`Ativo ${tag} cadastrado com sucesso!`);
       });
     }
-  }
-
-  // Add Part Form Handler
-  setupPartForm() {
-    const form = document.getElementById('form-add-part');
-    if (form) {
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('new-part-name').value;
-        const sku = document.getElementById('new-part-sku').value;
-        const category = document.getElementById('new-part-category').value;
-        const price = parseFloat(document.getElementById('new-part-price').value);
-        const qty = parseInt(document.getElementById('new-part-qty').value, 10);
-        const warranty = parseInt(document.getElementById('new-part-warranty').value, 10);
-
-        const newPart = {
-          id: `part-${Date.now()}`,
-          sku: sku,
-          name: name,
-          category: category,
-          unitCost: price * 0.6,
-          unitPrice: price,
-          stockQuantity: qty,
-          minStockQuantity: 3,
-          location: "Almoxarifado Central",
-          warrantyMonths: warranty
-        };
-
-        partsInventory.unshift(newPart);
-        document.getElementById('modal-add-part').classList.remove('active');
-        form.reset();
-        this.renderAll();
-        alert(`Peça ${name} cadastrada com sucesso no estoque!`);
-      });
-    }
-  }
-
-  // AI Smart Assistant Query Controller (Sprint 3)
-  setupAIQuery() {
-    const btnSubmit = document.getElementById('btn-submit-ai-query');
-    const inputQuery = document.getElementById('ai-query-input');
-    const responseBox = document.getElementById('ai-query-response-box');
-
-    if (btnSubmit && inputQuery && responseBox) {
-      btnSubmit.addEventListener('click', () => {
-        const queryText = inputQuery.value.trim();
-        if (!queryText) return;
-
-        responseBox.style.display = 'block';
-        responseBox.innerHTML = `
-          <div style="color: var(--primary); font-weight: 600; margin-bottom: 6px;">🤖 Resposta do Assistente IA:</div>
-          <div>Analisando base de 142 ativos patrimoniais e histórico de 84 Ordens de Serviço...</div>
-          <div style="margin-top: 8px; color: var(--text-main); line-height: 1.5;">
-            "O ativo com maior risco iminente de quebra é o <strong>CHILLER-CARRIER-01</strong> (Condomínio Torre Sul). A IA identificou um padrão de vibração anormal no Compressor 1 e queda de pressão de óleo. Recomendamos efetuar a manutenção preventiva antes de <strong>25/08/2026</strong> para evitar custo de R$ 4.500,00 com rebobinamento de motor."
-          </div>
-        `;
-      });
-    }
-  }
-
-  // Quick QR Scan Simulator
-  setupQuickScan() {
-    document.querySelectorAll('.btn-quick-scan').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const hash = btn.getAttribute('data-hash');
-        const foundAsset = assets.find(a => a.qrCodeHash === hash);
-        if (foundAsset) {
-          this.openAssetDetailModal(foundAsset);
-        }
-      });
-    });
-  }
-
-  // Open Asset Prontuário Modal
-  openAssetDetailModal(asset) {
-    document.getElementById('modal-detail-tag').textContent = asset.tagName;
-    document.getElementById('modal-detail-customer').textContent = `${asset.customerName} - ${asset.locationName}`;
-    document.getElementById('modal-detail-model').textContent = `${asset.model} | Saúde Preditiva IA: ${asset.healthIndexScore || 95}%`;
-    document.getElementById('modal-detail-status').textContent = asset.status === 'INSTALLED' ? 'INSTALADO' : 'EM MANUTENÇÃO';
-
-    const historyContainer = document.getElementById('modal-detail-history');
-    historyContainer.innerHTML = asset.history.map(item => `
-      <div style="font-size: 0.85rem; border-left: 2px solid var(--primary); padding-left: 10px;">
-        <div style="font-weight: 600; color: var(--primary);">${item.date} - ${item.type}</div>
-        <div style="color: var(--text-muted);">${item.text}</div>
-      </div>
-    `).join('');
-
-    // Thermal Label text preview
-    document.getElementById('print-tag-name').textContent = asset.tagName;
-    document.getElementById('print-customer').textContent = asset.customerName;
-    document.getElementById('print-hash').textContent = asset.qrCodeHash;
-
-    document.getElementById('modal-asset-detail').classList.add('active');
-  }
-
-  // Open OS Execution Modal
-  openWorkOrderExecModal(wo) {
-    this.activeWorkOrder = wo;
-    document.getElementById('os-exec-title').textContent = `Execução da ${wo.osNumber}`;
-    document.getElementById('os-exec-asset-tag').textContent = wo.assetTag;
-
-    const checklistContainer = document.getElementById('os-exec-checklist-group');
-    checklistContainer.innerHTML = wo.checklists.map(c => `
-      <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-card); border-radius: var(--radius-sm); cursor: pointer;">
-        <input type="checkbox" ${c.isChecked ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary);">
-        <span style="font-size: 0.85rem;">${c.label}</span>
-      </label>
-    `).join('');
-
-    if (this.signaturePad) {
-      this.signaturePad.resizeCanvas();
-    }
-
-    document.getElementById('modal-os-exec').classList.add('active');
-  }
-
-  // Render All Views
-  renderAll() {
-    this.renderDashboardOS();
-    this.renderCategoryDistribution();
-    this.renderAssetsGrid();
-    this.renderWorkOrdersTable();
-    this.renderFinancialView();
-    this.renderAIView();
-    this.renderCustomersList();
-
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
-  }
-
-  renderDashboardOS() {
-    const tbody = document.getElementById('table-dashboard-os');
-    if (!tbody) return;
-
-    tbody.innerHTML = workOrders.slice(0, 5).map(wo => `
-      <tr>
-        <td style="font-weight: 600; color: var(--primary);">${wo.osNumber}</td>
-        <td><strong>${wo.assetTag}</strong></td>
-        <td>${wo.customerName}</td>
-        <td><span class="badge ${wo.type === 'CORRECTIVE' ? 'badge-danger' : 'badge-info'}">${wo.type}</span></td>
-        <td><span class="badge ${wo.status === 'FINISHED' ? 'badge-success' : 'badge-warning'}">${wo.status}</span></td>
-        <td>
-          <button class="btn btn-secondary btn-icon btn-open-os" data-id="${wo.id}" title="Executar OS">
-            <i data-lucide="play-circle"></i>
-          </button>
-        </td>
-      </tr>
-    `).join('');
-
-    tbody.querySelectorAll('.btn-open-os').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const wo = workOrders.find(w => w.id === id);
-        if (wo) this.openWorkOrderExecModal(wo);
-      });
-    });
-  }
-
-  renderCategoryDistribution() {
-    const container = document.getElementById('category-distribution-list');
-    if (!container) return;
-
-    container.innerHTML = assetCategories.map(cat => {
-      const count = assets.filter(a => a.categoryId === cat.id).length;
-      return `
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background-color: var(--bg-primary); border-radius: var(--radius-md);">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <i data-lucide="${cat.icon}" style="color: var(--primary);"></i>
-            <span style="font-size: 0.9rem; font-weight: 500;">${cat.name}</span>
-          </div>
-          <span class="badge badge-info">${count} Ativos</span>
-        </div>
-      `;
-    }).join('');
-  }
-
-  renderAssetsGrid() {
-    const grid = document.getElementById('assets-grid');
-    if (!grid) return;
-
-    grid.innerHTML = assets.map(a => `
-      <div class="card asset-card-item" data-id="${a.id}">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-          <div>
-            <h3 style="font-size: 1.1rem; color: #fff;">${a.tagName}</h3>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">${a.categoryName}</div>
-          </div>
-          <span class="badge ${a.status === 'INSTALLED' ? 'badge-success' : 'badge-warning'}">
-            ${a.status === 'INSTALLED' ? 'Instalado' : 'Manutenção'}
-          </span>
-        </div>
-
-        <div style="font-size: 0.85rem; margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px;">
-          <div><strong>Cliente:</strong> ${a.customerName}</div>
-          <div><strong>Local:</strong> ${a.locationName}</div>
-          <div><strong>Saúde IA:</strong> <span style="font-weight: 700; color: ${a.healthIndexScore < 60 ? 'var(--danger)' : 'var(--success)'};">${a.healthIndexScore || 95}%</span></div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; pt-3; border-top: var(--glass-border);">
-          <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">${a.qrCodeHash}</span>
-          <button class="btn btn-secondary btn-icon btn-view-asset-detail" data-id="${a.id}">
-            <i data-lucide="file-text"></i>
-          </button>
-        </div>
-      </div>
-    `).join('');
-
-    grid.querySelectorAll('.btn-view-asset-detail').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const asset = assets.find(a => a.id === id);
-        if (asset) this.openAssetDetailModal(asset);
-      });
-    });
-  }
-
-  renderWorkOrdersTable() {
-    const tbody = document.getElementById('table-full-os');
-    if (!tbody) return;
-
-    tbody.innerHTML = workOrders.map(wo => `
-      <tr>
-        <td style="font-weight: 700; color: var(--primary);">${wo.osNumber}</td>
-        <td><strong>${wo.assetTag}</strong></td>
-        <td>${wo.customerName}</td>
-        <td><span class="badge ${wo.priority === 'CRITICAL' ? 'badge-danger' : 'badge-warning'}">${wo.priority}</span></td>
-        <td><span class="badge ${wo.status === 'FINISHED' ? 'badge-success' : 'badge-info'}">${wo.status}</span></td>
-        <td>
-          ${wo.aiAudit ? `<span class="badge badge-success" title="${wo.aiAudit.notes}">✓ IA ${wo.aiAudit.confidence}%</span>` : '<span class="badge badge-info">Pendente</span>'}
-        </td>
-        <td style="font-weight: 600; color: var(--success);">R$ ${wo.totalCost.toFixed(2)}</td>
-        <td>
-          <button class="btn btn-secondary btn-open-os" data-id="${wo.id}">
-            <i data-lucide="play"></i> Abrir
-          </button>
-        </td>
-      </tr>
-    `).join('');
-
-    tbody.querySelectorAll('.btn-open-os').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const wo = workOrders.find(w => w.id === id);
-        if (wo) this.openWorkOrderExecModal(wo);
-      });
-    });
-  }
-
-  renderFinancialView() {
-    const tbodyParts = document.getElementById('table-parts-inventory');
-    if (tbodyParts) {
-      tbodyParts.innerHTML = partsInventory.map(part => `
-        <tr>
-          <td style="font-family: monospace; color: var(--primary); font-weight: 600;">${part.sku}</td>
-          <td><strong>${part.name}</strong></td>
-          <td><span class="badge badge-info">${part.category}</span></td>
-          <td style="font-weight: 600;">R$ ${part.unitPrice.toFixed(2)}</td>
-          <td>
-            <span class="badge ${part.stockQuantity <= part.minStockQuantity ? 'badge-danger' : 'badge-success'}">
-              ${part.stockQuantity} un
-            </span>
-          </td>
-          <td style="font-size: 0.85rem; color: var(--text-muted);">${part.location}</td>
-          <td>${part.warrantyMonths > 0 ? `${part.warrantyMonths} meses` : 'Sem garantia'}</td>
-        </tr>
-      `).join('');
-    }
-
-    const tbodyBilling = document.getElementById('table-client-billing');
-    if (tbodyBilling) {
-      tbodyBilling.innerHTML = customers.map(cust => {
-        const custWos = workOrders.filter(w => w.customerName === cust.name);
-        const laborCostSum = custWos.reduce((sum, w) => sum + (w.laborCost || 0), 0);
-        const partsCostSum = custWos.reduce((sum, w) => sum + (w.partsCost || 0), 0);
-        const grandTotal = cust.contractValueMonthly + laborCostSum + partsCostSum;
-
-        return `
-          <tr>
-            <td><strong>${cust.name}</strong></td>
-            <td>R$ ${cust.contractValueMonthly.toFixed(2)}</td>
-            <td>R$ ${laborCostSum.toFixed(2)}</td>
-            <td>R$ ${partsCostSum.toFixed(2)}</td>
-            <td style="font-weight: 700; color: var(--success); font-size: 1rem;">R$ ${grandTotal.toFixed(2)}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-  }
-
-  // AI Insights & Predictive Health Renderer (Sprint 3)
-  renderAIView() {
-    const insightsContainer = document.getElementById('ai-insights-list');
-    if (insightsContainer) {
-      insightsContainer.innerHTML = aiInsights.map(insight => `
-        <div style="padding: 16px; background-color: var(--bg-primary); border-radius: var(--radius-md); border-left: 4px solid ${insight.riskLevel === 'CRITICAL' ? 'var(--danger)' : 'var(--success)'};">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <strong style="color: #fff; font-size: 1rem;">${insight.assetTag} (${insight.customerName})</strong>
-            <span class="badge ${insight.riskLevel === 'CRITICAL' ? 'badge-danger' : 'badge-success'}">
-              Risco Preditivo ${insight.riskScore}%
-            </span>
-          </div>
-
-          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;">
-            <strong>Componente sob Alerta:</strong> ${insight.predictedComponent} | <strong>Previsão de Falha:</strong> ${insight.predictedFailureDate}
-          </div>
-
-          <div style="font-size: 0.85rem; margin-bottom: 8px;">
-            <strong>Recomendação IA:</strong> ${insight.recommendation}
-          </div>
-
-          <div style="font-size: 0.8rem; color: var(--success); font-weight: 600;">
-            💰 Economia Estimada ao Evitar Parada: R$ ${insight.financialSavingsIfPrevented.toFixed(2)}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    // Vision Audit Sidebar Logs
-    const visionAuditContainer = document.getElementById('ai-vision-audit-list');
-    if (visionAuditContainer) {
-      visionAuditContainer.innerHTML = workOrders.map(wo => `
-        <div style="padding: 12px; background: var(--bg-primary); border-radius: var(--radius-sm); font-size: 0.8rem;">
-          <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px;">
-            <span>${wo.osNumber} - ${wo.assetTag}</span>
-            <span style="color: var(--success);">Confiança ${wo.aiAudit ? wo.aiAudit.confidence : 98}%</span>
-          </div>
-          <div style="color: var(--text-muted);">${wo.aiAudit ? wo.aiAudit.notes : 'Foto auditada por IA.'}</div>
-        </div>
-      `).join('');
-    }
-  }
-
-  renderCustomersList() {
-    const container = document.getElementById('customers-list');
-    if (!container) return;
-
-    container.innerHTML = customers.map(c => `
-      <div class="card">
-        <h3 style="margin-bottom: 6px;">${c.name}</h3>
-        <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">CNPJ: ${c.document} | Contato: ${c.contactName}</div>
-        
-        <h4 style="font-size: 0.85rem; margin-bottom: 8px;">Locais & Parques de Ativos:</h4>
-        <div style="display: flex; flex-direction: column; gap: 6px;">
-          ${c.locations.map(loc => `
-            <div style="font-size: 0.8rem; padding: 6px 10px; background: var(--bg-primary); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 8px;">
-              <i data-lucide="map-pin" style="font-size: 0.8rem; color: var(--primary);"></i>
-              <span>${loc.name}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `).join('');
   }
 }
 
