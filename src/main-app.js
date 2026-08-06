@@ -1,21 +1,21 @@
-import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.6.0';
-import { authService } from './services/auth-service.js?v=2.6.0';
-import { subscriptionService } from './services/subscription-service.js?v=2.6.0';
-import { billingService } from './services/billing-service.js?v=2.6.0';
-import { tenantDataService } from './services/tenant-data-service.js?v=2.6.0';
-import { renderLandingPage } from './views/landing-page.js?v=2.6.0';
-import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.6.0';
-import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.6.0';
-import { NewServiceWizard } from './views/new-service-wizard.js?v=2.6.0';
-import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.6.0';
-import { offlineSyncQueue } from './mock-data.js?v=2.6.0';
+import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.7.0';
+import { authService } from './services/auth-service.js?v=2.7.0';
+import { subscriptionService } from './services/subscription-service.js?v=2.7.0';
+import { billingService } from './services/billing-service.js?v=2.7.0';
+import { tenantDataService } from './services/tenant-data-service.js?v=2.7.0';
+import { renderLandingPage } from './views/landing-page.js?v=2.7.0';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.7.0';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.7.0';
+import { NewServiceWizard } from './views/new-service-wizard.js?v=2.7.0';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.7.0';
+import { offlineSyncQueue } from './mock-data.js?v=2.7.0';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
 let _dbConfigModule = null;
 async function loadDbConfigModule() {
   if (!_dbConfigModule) {
     try {
-      _dbConfigModule = await import('./views/database-config-view.js?v=2.6.0');
+      _dbConfigModule = await import('./views/database-config-view.js?v=2.7.0');
     } catch (e) {
       console.warn('[App] Failed to load database-config-view:', e);
       _dbConfigModule = {
@@ -1117,15 +1117,39 @@ class AppController {
     if (btnHome) btnHome.addEventListener('click', () => this.resetToHome());
 
     const logoWrapper = document.getElementById('brand-logo-wrapper');
-    if (logoWrapper) {
+    const directFileInput = document.getElementById('direct-logo-file-input');
+
+    if (logoWrapper && directFileInput) {
       logoWrapper.addEventListener('click', (e) => {
         e.stopPropagation();
         const user = authService.getCurrentUser();
         if (user) {
-          this.openCustomLogoModal();
+          directFileInput.click();
         } else {
           this.resetToHome();
         }
+      });
+
+      directFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 3 * 1024 * 1024) {
+          alert('Por favor, selecione uma imagem de até 3MB.');
+          return;
+        }
+
+        const user = authService.getCurrentUser();
+        if (!user) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Data = event.target.result;
+          tenantDataService.saveTenantLogo(user.tenantId, base64Data);
+          this.updateHeaderLogo();
+          alert('✓ Logotipo da empresa atualizado com sucesso!');
+        };
+        reader.readAsDataURL(file);
       });
     }
 

@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.6.0 - Purged Database Cloud card & Logo card, direct Header Logo upload.
+   v2.7.0 - Zero Cards for logo, direct File Picker on logo icon click.
    ========================================================================== */
 
 // Install: skip waiting immediately
