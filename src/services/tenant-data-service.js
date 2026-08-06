@@ -512,6 +512,29 @@ class TenantDataService {
 
     return timeline.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }
+
+  // Tenant Custom Logo
+  getTenantLogo(tenantId) {
+    try {
+      return localStorage.getItem(`saas_asset_logo_${tenantId}`) || null;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  saveTenantLogo(tenantId, logoDataUrl) {
+    try {
+      localStorage.setItem(`saas_asset_logo_${tenantId}`, logoDataUrl);
+    } catch(e) {
+      console.warn('[TenantDataService] Falha ao salvar logotipo localmente:', e);
+    }
+  }
+
+  removeTenantLogo(tenantId) {
+    try {
+      localStorage.removeItem(`saas_asset_logo_${tenantId}`);
+    } catch(e) {}
+  }
 }
 
 export const tenantDataService = new TenantDataService();

@@ -1,21 +1,21 @@
-import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.3.0';
-import { authService } from './services/auth-service.js?v=2.3.0';
-import { subscriptionService } from './services/subscription-service.js?v=2.3.0';
-import { billingService } from './services/billing-service.js?v=2.3.0';
-import { tenantDataService } from './services/tenant-data-service.js?v=2.3.0';
-import { renderLandingPage } from './views/landing-page.js?v=2.3.0';
-import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.3.0';
-import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.3.0';
-import { NewServiceWizard } from './views/new-service-wizard.js?v=2.3.0';
-import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.3.0';
-import { offlineSyncQueue } from './mock-data.js?v=2.3.0';
+import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.4.0';
+import { authService } from './services/auth-service.js?v=2.4.0';
+import { subscriptionService } from './services/subscription-service.js?v=2.4.0';
+import { billingService } from './services/billing-service.js?v=2.4.0';
+import { tenantDataService } from './services/tenant-data-service.js?v=2.4.0';
+import { renderLandingPage } from './views/landing-page.js?v=2.4.0';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.4.0';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.4.0';
+import { NewServiceWizard } from './views/new-service-wizard.js?v=2.4.0';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.4.0';
+import { offlineSyncQueue } from './mock-data.js?v=2.4.0';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
 let _dbConfigModule = null;
 async function loadDbConfigModule() {
   if (!_dbConfigModule) {
     try {
-      _dbConfigModule = await import('./views/database-config-view.js?v=2.3.0');
+      _dbConfigModule = await import('./views/database-config-view.js?v=2.4.0');
     } catch (e) {
       console.warn('[App] Failed to load database-config-view:', e);
       _dbConfigModule = {
@@ -71,6 +71,144 @@ class AppController {
     const user = authService.getCurrentUser();
     const tenantId = user ? user.tenantId : 'tenant-alfa-001';
     return tenantDataService.getTenantData(tenantId);
+  }
+
+  updateHeaderLogo() {
+    const defaultIcon = document.getElementById('brand-default-icon');
+    const customLogoImg = document.getElementById('brand-custom-logo');
+    const user = authService.getCurrentUser();
+
+    if (user && customLogoImg) {
+      const logo = tenantDataService.getTenantLogo(user.tenantId);
+      if (logo) {
+        customLogoImg.src = logo;
+        customLogoImg.style.display = 'block';
+        if (defaultIcon) defaultIcon.style.display = 'none';
+      } else {
+        customLogoImg.style.display = 'none';
+        if (defaultIcon) defaultIcon.style.display = 'flex';
+      }
+    } else if (customLogoImg) {
+      customLogoImg.style.display = 'none';
+      if (defaultIcon) defaultIcon.style.display = 'flex';
+    }
+  }
+
+  openCustomLogoModal() {
+    const user = authService.getCurrentUser();
+    if (!user) return;
+
+    const existingLogo = tenantDataService.getTenantLogo(user.tenantId);
+
+    const modalHTML = `
+      <div class="modal active" id="modal-custom-logo">
+        <div class="modal-content" style="max-width: 520px; padding: 24px; border-radius: var(--radius-lg);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            <h3 style="display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="image" style="color: var(--primary);"></i>
+              Logotipo da Sua Empresa
+            </h3>
+            <button id="btn-close-logo-modal" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">✕</button>
+          </div>
+
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+            Insira o logotipo da sua empresa para exibir no cabeçalho do sistema e nos laudos emitidos.
+          </p>
+
+          <div style="text-align: center; margin-bottom: 20px; padding: 20px; background: var(--bg-primary); border: 2px dashed var(--border-color); border-radius: var(--radius-md);">
+            <div id="logo-preview-wrapper" style="margin-bottom: 12px;">
+              ${existingLogo ? `
+                <img id="img-logo-preview" src="${existingLogo}" style="max-height: 80px; max-width: 220px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              ` : `
+                <div id="icon-logo-placeholder" style="width: 70px; height: 70px; margin: 0 auto; background: var(--primary); color: #fff; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                  <i data-lucide="cloud-cog"></i>
+                </div>
+              `}
+            </div>
+            <label class="btn btn-secondary" style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+              <i data-lucide="upload"></i> Selecionar Imagem do Logotipo
+              <input type="file" id="file-input-logo" accept="image/*" style="display: none;">
+            </label>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px;">Suporta PNG, JPG, SVG ou WEBP (recomendado fundo transparente)</div>
+          </div>
+
+          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            ${existingLogo ? `
+              <button id="btn-remove-logo" class="btn" style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">
+                <i data-lucide="trash-2"></i> Remover Logotipo
+              </button>
+            ` : ''}
+            <button id="btn-save-logo" class="btn btn-primary" style="display: none;">
+              <i data-lucide="check"></i> Salvar Logotipo
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const existingContainer = document.getElementById('custom-logo-modal-container');
+    if (existingContainer) existingContainer.remove();
+
+    const container = document.createElement('div');
+    container.id = 'custom-logo-modal-container';
+    container.innerHTML = modalHTML;
+    document.body.appendChild(container);
+
+    if (window.lucide) window.lucide.createIcons();
+
+    let pendingBase64 = null;
+    const fileInput = document.getElementById('file-input-logo');
+    const previewWrapper = document.getElementById('logo-preview-wrapper');
+    const btnSave = document.getElementById('btn-save-logo');
+    const btnRemove = document.getElementById('btn-remove-logo');
+    const btnClose = document.getElementById('btn-close-logo-modal');
+
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 2 * 1024 * 1024) {
+          alert('Por favor, selecione uma imagem de até 2MB.');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          pendingBase64 = event.target.result;
+          previewWrapper.innerHTML = `
+            <img src="${pendingBase64}" style="max-height: 80px; max-width: 220px; object-fit: contain; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          `;
+          btnSave.style.display = 'inline-flex';
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (btnSave) {
+      btnSave.addEventListener('click', () => {
+        if (pendingBase64) {
+          tenantDataService.saveTenantLogo(user.tenantId, pendingBase64);
+          container.remove();
+          this.renderRouterView();
+          alert('✓ Logotipo da empresa salvo com sucesso!');
+        }
+      });
+    }
+
+    if (btnRemove) {
+      btnRemove.addEventListener('click', () => {
+        if (confirm('Deseja remover o logotipo personalizado e voltar ao padrão?')) {
+          tenantDataService.removeTenantLogo(user.tenantId);
+          container.remove();
+          this.renderRouterView();
+        }
+      });
+    }
+
+    if (btnClose) {
+      btnClose.addEventListener('click', () => container.remove());
+    }
   }
 
   startNewServiceWizard() {
@@ -178,26 +316,58 @@ class AppController {
         }
       }
 
-      // Render Trial Top Banner
+      // Render Minimizable Trial Top Banner
       if (trialConfig) {
-        trialBannerContainer.innerHTML = `
-          <div class="trial-banner" style="${trialConfig.messageStyle}">
-            <span>💡 <strong>Aviso de Teste Grátis:</strong> ${trialConfig.text}</span>
-            <button class="btn-trial-action" id="btn-trial-upgrade-now">Conhecer Planos</button>
-          </div>
-        `;
-        document.getElementById('btn-trial-upgrade-now').addEventListener('click', () => {
-          this.pushLevel(this.getSubscriptionManagementLevel1Config());
-        });
+        if (this.isTrialBannerMinimized) {
+          trialBannerContainer.innerHTML = `
+            <div class="trial-banner" style="${trialConfig.messageStyle}; padding: 6px 16px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; border-radius: 0;">
+              <span>💡 <strong>Teste Grátis:</strong> ${sub.remainingDays} dias restantes</span>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn-trial-action" id="btn-trial-upgrade-now" style="padding: 2px 10px; font-size: 0.75rem;">Planos</button>
+                <button id="btn-toggle-trial-banner" title="Expandir aviso" style="background: none; border: none; color: currentColor; cursor: pointer; padding: 2px; display: inline-flex; align-items: center; opacity: 0.85;">
+                  <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          trialBannerContainer.innerHTML = `
+            <div class="trial-banner" style="${trialConfig.messageStyle}; display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-radius: 0;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span>💡 <strong>Aviso de Teste Grátis:</strong> ${trialConfig.text}</span>
+              </div>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn-trial-action" id="btn-trial-upgrade-now">Conhecer Planos</button>
+                <button id="btn-toggle-trial-banner" title="Minimizar aviso" style="background: rgba(255,255,255,0.25); border: none; color: currentColor; cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                  <i data-lucide="chevron-up" style="width: 14px; height: 14px;"></i>
+                  <span>Minimizar</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        const btnUpgrade = document.getElementById('btn-trial-upgrade-now');
+        if (btnUpgrade) {
+          btnUpgrade.addEventListener('click', () => {
+            this.pushLevel(this.getSubscriptionManagementLevel1Config());
+          });
+        }
+
+        const btnToggleTrial = document.getElementById('btn-toggle-trial-banner');
+        if (btnToggleTrial) {
+          btnToggleTrial.addEventListener('click', () => {
+            this.isTrialBannerMinimized = !this.isTrialBannerMinimized;
+            try { localStorage.setItem('saas_trial_banner_minimized', this.isTrialBannerMinimized); } catch(ex) {}
+            this.renderRouterView();
+          });
+        }
       } else {
         trialBannerContainer.innerHTML = '';
       }
 
-      // Update Topbar Right
+      // Update Topbar Right (WITHOUT ONLINE ICON PILL)
       topbarRight.innerHTML = `
-        <div class="tenant-pill" id="pwa-status-pill">
-          <i data-lucide="wifi"></i> <span>ONLINE</span>
-        </div>
         <div class="tenant-pill" style="background-color: #f1f5f9; color: #334155;">
           🏢 ${tenant.name}
         </div>
@@ -208,6 +378,8 @@ class AppController {
           Sair
         </button>
       `;
+
+      this.updateHeaderLogo();
 
       document.getElementById('btn-app-logout').addEventListener('click', () => {
         authService.logout();
@@ -514,7 +686,7 @@ class AppController {
         `;
       }
 
-      const displayBlocks = current.blocks.slice(0, 8);
+      const displayBlocks = current.blocks;
 
       blockGridContainer.innerHTML = topActionBarHTML + displayBlocks.map(block => `
         <div class="block-card" data-block-id="${block.id}">
@@ -647,6 +819,15 @@ class AppController {
           iconBgClass: "icon-box-amber",
           badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length}`,
           onClick: () => this.pushLevel(this.getPWAOfflineLevel1Config())
+        },
+        {
+          id: "mod-custom-logo",
+          title: "Logotipo da Empresa",
+          desc: "Personalizar logotipo e marca da empresa",
+          icon: "image",
+          iconBgClass: "icon-box-blue",
+          badge: user && tenantDataService.getTenantLogo(user.tenantId) ? "Personalizado" : "Padrão",
+          onClick: () => this.openCustomLogoModal()
         }
       ]
     };

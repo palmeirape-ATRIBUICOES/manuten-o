@@ -1,5 +1,5 @@
 /* ==========================================================================
-   PUBLIC LANDING PAGE - SAAS ASSET MANAGEMENT (EXACT LIGHT UI MATCH)
+   PUBLIC LANDING PAGE - OS CLOUD (EXACT LIGHT UI MATCH)
    ========================================================================== */
 
 import { SAAS_PLANS } from '../config/plans.js';

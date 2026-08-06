@@ -79,7 +79,7 @@ export function renderLoginPage() {
           <div class="brand-icon" style="margin: 0 auto 12px; width: 50px; height: 50px;">
             <i data-lucide="lock"></i>
           </div>
-          <h2>Entrar no SaaS Asset Management</h2>
+          <h2>Entrar no OS Cloud</h2>
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
             Acesse o painel administrativo da sua empresa.
           </p>

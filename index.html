@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SaaS Asset Management - Gestão do Ciclo de Vida do Ativo Patrimonial</title>
+  <title>OS Cloud - Gestão do Ciclo de Vida do Ativo Patrimonial</title>
 
   <!-- STEP 1: Force unregister ALL old Service Workers and purge ALL caches BEFORE anything loads -->
   <script>
@@ -92,11 +92,14 @@
 
     <header class="topbar">
       <div class="brand-container" id="btn-go-home" title="Ir para a Tela Inicial">
-        <div class="brand-icon">
-          <i data-lucide="target"></i>
+        <div id="brand-logo-wrapper" style="display: flex; align-items: center; gap: 10px;">
+          <div class="brand-icon" id="brand-default-icon">
+            <i data-lucide="cloud-cog"></i>
+          </div>
+          <img id="brand-custom-logo" style="display: none; height: 38px; max-width: 160px; object-fit: contain; border-radius: 6px;" alt="Logotipo">
         </div>
         <div>
-          <div class="brand-title">SaaS Asset Management</div>
+          <div class="brand-title">OS Cloud</div>
           <div style="font-size: 0.8rem; color: var(--text-muted);" id="header-company-name">Plataforma de Manutenção & Ativos</div>
         </div>
       </div>
@@ -150,12 +153,12 @@
   <!-- Register the new pass-through Service Worker (replaces old caching one) -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=2.3.0').catch(function() {});
+      navigator.serviceWorker.register('./sw.js?v=2.4.0').catch(function() {});
     }
   </script>
 
   <!-- Application Logic -->
-  <script type="module" src="src/app.js?v=2.3.0"></script>
+  <script type="module" src="src/app.js?v=2.4.0"></script>
 
 </body>
 </html>

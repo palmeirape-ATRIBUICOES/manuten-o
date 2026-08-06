@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.3.0 - Clean initial workspace state & Financial privacy Eye Toggle.
+   v2.4.0 - Rebranded to OS Cloud, Minimizable Trial Banner, Removed ONLINE Pill & Custom Logo support.
    ========================================================================== */
 
 // Install: skip waiting immediately

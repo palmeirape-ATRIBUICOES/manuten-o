@@ -1,6 +1,6 @@
 {
-  "name": "SaaS Asset Management PWA",
-  "short_name": "AssetPWA",
+  "name": "OS Cloud",
+  "short_name": "OS Cloud",
   "description": "Plataforma de Gestão de Ativos e Ordens de Serviço Offline-First",
   "start_url": "./index.html",
   "display": "standalone",
