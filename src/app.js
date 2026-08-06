@@ -12,6 +12,7 @@ import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from '.
 import { renderSubscriptionManagementPage } from './views/subscription-page.js';
 import { NewServiceWizard } from './views/new-service-wizard.js';
 import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
+import { renderDatabaseConfigView, attachDatabaseConfigEvents } from './views/database-config-view.js';
 
 class AppController {
   constructor() {
@@ -518,13 +519,18 @@ class AppController {
       breadcrumbTitle: "Painel Principal",
       blocks: [
         {
-          id: "mod-new-service-btn",
-          title: "+ Novo serviço",
-          desc: "Fluxo curto guiado em 4 etapas",
-          icon: "plus-circle",
+          id: "mod-database-config",
+          title: "Banco de Dados Cloud",
+          desc: "Supabase PostgreSQL & Sincronização",
+          icon: "database",
           iconBgClass: "icon-box-emerald",
-          badge: "Novo",
-          onClick: () => this.startNewServiceWizard()
+          badge: "Cloud",
+          onClick: () => this.pushLevel({
+            title: "Configuração de Banco de Dados Cloud",
+            breadcrumbTitle: "Banco de Dados",
+            renderContent: () => renderDatabaseConfigView(),
+            onContentLoaded: () => attachDatabaseConfigEvents()
+          })
         },
         {
           id: "mod-services-list",
