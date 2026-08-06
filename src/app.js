@@ -1,21 +1,21 @@
-import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.4.0';
-import { authService } from './services/auth-service.js?v=2.4.0';
-import { subscriptionService } from './services/subscription-service.js?v=2.4.0';
-import { billingService } from './services/billing-service.js?v=2.4.0';
-import { tenantDataService } from './services/tenant-data-service.js?v=2.4.0';
-import { renderLandingPage } from './views/landing-page.js?v=2.4.0';
-import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.4.0';
-import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.4.0';
-import { NewServiceWizard } from './views/new-service-wizard.js?v=2.4.0';
-import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.4.0';
-import { offlineSyncQueue } from './mock-data.js?v=2.4.0';
+import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.5.0';
+import { authService } from './services/auth-service.js?v=2.5.0';
+import { subscriptionService } from './services/subscription-service.js?v=2.5.0';
+import { billingService } from './services/billing-service.js?v=2.5.0';
+import { tenantDataService } from './services/tenant-data-service.js?v=2.5.0';
+import { renderLandingPage } from './views/landing-page.js?v=2.5.0';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.5.0';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.5.0';
+import { NewServiceWizard } from './views/new-service-wizard.js?v=2.5.0';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.5.0';
+import { offlineSyncQueue } from './mock-data.js?v=2.5.0';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
 let _dbConfigModule = null;
 async function loadDbConfigModule() {
   if (!_dbConfigModule) {
     try {
-      _dbConfigModule = await import('./views/database-config-view.js?v=2.4.0');
+      _dbConfigModule = await import('./views/database-config-view.js?v=2.5.0');
     } catch (e) {
       console.warn('[App] Failed to load database-config-view:', e);
       _dbConfigModule = {
@@ -748,23 +748,6 @@ class AppController {
           iconBgClass: "icon-box-emerald",
           badge: "Novo",
           onClick: () => this.startNewServiceWizard()
-        },
-        {
-          id: "mod-database-config",
-          title: "Banco de Dados Cloud",
-          desc: "Supabase PostgreSQL & Sincronização",
-          icon: "database",
-          iconBgClass: "icon-box-emerald",
-          badge: "Cloud",
-          onClick: async () => {
-            const dbMod = await loadDbConfigModule();
-            this.pushLevel({
-              title: "Configuração de Banco de Dados Cloud",
-              breadcrumbTitle: "Banco de Dados",
-              renderContent: () => dbMod.renderDatabaseConfigView(),
-              onContentLoaded: () => dbMod.attachDatabaseConfigEvents()
-            });
-          }
         },
         {
           id: "mod-services-list",

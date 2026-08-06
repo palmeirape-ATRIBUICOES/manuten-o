@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.4.0 - Rebranded to OS Cloud, Minimizable Trial Banner, Removed ONLINE Pill & Custom Logo support.
+   v2.5.0 - Removed Database Cloud config block (centralized database connected).
    ========================================================================== */
 
 // Install: skip waiting immediately
