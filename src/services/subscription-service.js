@@ -1,24 +1,33 @@
 /* ==========================================================================
-   SUBSCRIPTION SERVICE - 30-DAY TRIAL ENGINE, EXPIRATION LOCK & BILLING STATUS
+   SUBSCRIPTION SERVICE - SAFE 30-DAY TRIAL ENGINE & EXPIRATION LOCK
    ========================================================================== */
 
 import { TRIAL_CONFIG, SAAS_PLANS } from '../config/plans.js';
 
 const STORAGE_KEY_SUBSCRIPTIONS = 'saas_asset_subscriptions_db';
 
+function safeJSONParse(key, fallback = []) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch (e) {
+    return fallback;
+  }
+}
+
 class SubscriptionService {
 
   getTenantSubscription(tenantId) {
-    const subscriptions = JSON.parse(localStorage.getItem(STORAGE_KEY_SUBSCRIPTIONS) || '[]');
+    const subscriptions = safeJSONParse(STORAGE_KEY_SUBSCRIPTIONS, []);
     let sub = subscriptions.find(s => s.tenantId === tenantId);
 
     if (!sub) {
-      // Default fallback trial
       const now = new Date();
       const trialEnds = new Date(now.getTime() + TRIAL_CONFIG.durationDays * 24 * 60 * 60 * 1000);
       sub = {
         id: `sub-${Date.now()}`,
-        tenantId: tenantId,
+        tenantId: tenantId || 'tenant-alfa-001',
         planId: TRIAL_CONFIG.defaultPlanId,
         subscriptionStatus: "trial",
         trialStartedAt: now.toISOString(),
@@ -28,7 +37,9 @@ class SubscriptionService {
         accessStatus: "FULL_ACCESS"
       };
       subscriptions.push(sub);
-      localStorage.setItem(STORAGE_KEY_SUBSCRIPTIONS, JSON.stringify(subscriptions));
+      try {
+        localStorage.setItem(STORAGE_KEY_SUBSCRIPTIONS, JSON.stringify(subscriptions));
+      } catch(e) {}
     }
 
     return this.evaluateSubscriptionState(sub);
@@ -36,15 +47,13 @@ class SubscriptionService {
 
   evaluateSubscriptionState(sub) {
     const now = new Date();
-    const trialEnds = new Date(sub.trialEndsAt);
+    const trialEnds = new Date(sub.trialEndsAt || now);
 
-    // Calculate remaining days
     const diffTime = trialEnds.getTime() - now.getTime();
     const remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     sub.remainingDays = remainingDays > 0 ? remainingDays : 0;
 
-    // Check if trial is active vs expired
     if (sub.subscriptionStatus === 'trial') {
       if (remainingDays <= 0) {
         sub.subscriptionStatus = 'expired';
@@ -63,11 +72,13 @@ class SubscriptionService {
   }
 
   updateSubscription(updatedSub) {
-    const subscriptions = JSON.parse(localStorage.getItem(STORAGE_KEY_SUBSCRIPTIONS) || '[]');
+    const subscriptions = safeJSONParse(STORAGE_KEY_SUBSCRIPTIONS, []);
     const index = subscriptions.findIndex(s => s.tenantId === updatedSub.tenantId);
     if (index !== -1) {
       subscriptions[index] = updatedSub;
-      localStorage.setItem(STORAGE_KEY_SUBSCRIPTIONS, JSON.stringify(subscriptions));
+      try {
+        localStorage.setItem(STORAGE_KEY_SUBSCRIPTIONS, JSON.stringify(subscriptions));
+      } catch(e) {}
     }
   }
 
@@ -96,9 +107,9 @@ class SubscriptionService {
   }
 
   getTrialBannerConfig(sub) {
-    if (sub.subscriptionStatus !== 'trial') return null;
+    if (!sub || sub.subscriptionStatus !== 'trial') return null;
 
-    const days = sub.remainingDays;
+    const days = sub.remainingDays || 30;
     let badgeClass = 'badge-info';
     let messageStyle = 'background-color: #eff6ff; border-color: #bfdbfe; color: #1e40af;';
 
