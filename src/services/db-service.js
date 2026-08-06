@@ -12,8 +12,18 @@ const STORAGE_KEYS = {
 class DBService {
   constructor() {
     try {
-      this.supabaseUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL) || ENV.SUPABASE_URL;
-      this.supabaseKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY) || ENV.SUPABASE_ANON_KEY;
+      let storedUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL);
+      let storedKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY);
+
+      if (storedUrl && (storedUrl.includes('mvkzwqmioytlsjyerxvsw') || !storedUrl.startsWith('http'))) {
+        localStorage.removeItem(STORAGE_KEYS.SUPABASE_URL);
+        localStorage.removeItem(STORAGE_KEYS.SUPABASE_KEY);
+        storedUrl = null;
+        storedKey = null;
+      }
+
+      this.supabaseUrl = storedUrl || ENV.SUPABASE_URL;
+      this.supabaseKey = storedKey || ENV.SUPABASE_ANON_KEY;
     } catch(e) {
       this.supabaseUrl = ENV.SUPABASE_URL;
       this.supabaseKey = ENV.SUPABASE_ANON_KEY;
@@ -21,9 +31,9 @@ class DBService {
     
     this.isConnected = false;
 
-    // Auto save default credentials if empty
+    // Auto save default credentials if valid
     try {
-      if (!localStorage.getItem(STORAGE_KEYS.SUPABASE_URL)) {
+      if (this.supabaseUrl && this.supabaseKey && !localStorage.getItem(STORAGE_KEYS.SUPABASE_URL)) {
         localStorage.setItem(STORAGE_KEYS.SUPABASE_URL, this.supabaseUrl);
         localStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, this.supabaseKey);
       }
