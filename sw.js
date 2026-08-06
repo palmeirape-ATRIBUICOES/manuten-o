@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.2.5 - Entry point src/main-app.js + .nojekyll included.
+   v2.2.6 - App Root DOM rename + cleared dummy Supabase URL.
    ========================================================================== */
 
 // Install: skip waiting immediately

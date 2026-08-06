@@ -87,7 +87,7 @@
 </head>
 <body>
 
-  <div id="app">
+  <div id="app-root">
     <div id="trial-banner-container"></div>
 
     <header class="topbar">
@@ -171,12 +171,12 @@
   <!-- Register the new pass-through Service Worker (replaces old caching one) -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=2.2.5').catch(function() {});
+      navigator.serviceWorker.register('./sw.js?v=2.2.6').catch(function() {});
     }
   </script>
 
   <!-- Application Logic -->
-  <script type="module" src="src/main-app.js?v=2.2.5"></script>
+  <script type="module" src="src/main-app.js?v=2.2.6"></script>
 
 </body>
 </html>

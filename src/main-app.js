@@ -1031,6 +1031,7 @@ class AppController {
 function startApp() {
   if (!window.appController) {
     window.appController = new AppController();
+    window.app = window.appController;
   }
 }
 
