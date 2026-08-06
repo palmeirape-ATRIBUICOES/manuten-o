@@ -4,6 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SaaS Asset Management - Gestão do Ciclo de Vida do Ativo Patrimonial</title>
+
+  <!-- Automatic Service Worker Unregister & Cache Purge Script (Fixes Stale Mobile Cache) -->
+  <script>
+    (function() {
+      const APP_VERSION = 'v2.1.7_PURGE';
+      if (localStorage.getItem('saas_app_version') !== APP_VERSION) {
+        localStorage.setItem('saas_app_version', APP_VERSION);
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (let reg of registrations) {
+              reg.unregister().then(function() {
+                console.log('[PWA] Unregistered old SW:', reg.scope);
+              });
+            }
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (let name of names) {
+              caches.delete(name);
+            }
+          });
+        }
+      }
+    })();
+  </script>
   
   <!-- PWA Manifest & Web Icons -->
   <link rel="manifest" href="manifest.json">
