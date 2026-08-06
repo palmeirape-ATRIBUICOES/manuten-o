@@ -1,5 +1,5 @@
 /* ==========================================================================
-   APP MAIN CONTROLLER - CLEAN INITIAL STATE & ISOLATED TENANT DATA
+   APP MAIN CONTROLLER - WIZARD + NOVO SERVIÇO (4 ETAPAS GUIADAS)
    ========================================================================== */
 
 import { CanvasSignaturePad } from './components/canvas-signature.js';
@@ -10,6 +10,8 @@ import { tenantDataService } from './services/tenant-data-service.js';
 import { renderLandingPage } from './views/landing-page.js';
 import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js';
 import { renderSubscriptionManagementPage } from './views/subscription-page.js';
+import { NewServiceWizard } from './views/new-service-wizard.js';
+import { renderServiceDetailView } from './views/service-detail-view.js';
 import { offlineSyncQueue } from './mock-data.js';
 
 class AppController {
@@ -20,6 +22,7 @@ class AppController {
     this.isOnline = navigator.onLine;
 
     this.currentViewMode = 'PUBLIC_LANDING';
+    this.wizardInstance = null;
 
     this.init();
   }
@@ -45,6 +48,37 @@ class AppController {
     return tenantDataService.getTenantData(tenantId);
   }
 
+  startNewServiceWizard() {
+    const user = authService.getCurrentUser();
+    if (user && subscriptionService.isAccessBlocked(user.tenantId)) {
+      alert("Seu período gratuito de 30 dias terminou. Escolha um plano para cadastrar novos serviços.");
+      this.pushLevel(this.getSubscriptionManagementLevel1Config());
+      return;
+    }
+
+    this.wizardInstance = new NewServiceWizard(
+      (createdServiceId) => {
+        // On completion -> view created service
+        this.pushLevel({
+          title: "Detalhamento do Serviço",
+          breadcrumbTitle: "Ver Serviço",
+          renderContent: () => renderServiceDetailView(createdServiceId)
+        });
+      },
+      () => {
+        // On cancel/back -> return to home
+        this.resetToHome();
+      }
+    );
+
+    this.pushLevel({
+      title: "Novo Serviço — Assistente Guiado",
+      breadcrumbTitle: "Novo Serviço",
+      renderContent: () => this.wizardInstance.render(),
+      onContentLoaded: () => this.wizardInstance.attachEvents()
+    });
+  }
+
   renderRouterView() {
     const publicContainer = document.getElementById('public-view-container');
     const privateContainer = document.getElementById('private-view-container');
@@ -66,21 +100,21 @@ class AppController {
 
       companyTitleEl.textContent = tenant.name;
 
-      // Update KPI Row values dynamically for the active tenant
+      // Update KPI Row values
       const kpiRow = document.getElementById('kpi-summary-row');
       if (kpiRow) {
-        const totalCost = tenantData.workOrders.reduce((acc, w) => acc + (w.totalCost || 0), 0);
+        const totalCost = (tenantData.services || []).reduce((acc, w) => acc + (w.totalCost || 0), 0);
         kpiRow.innerHTML = `
           <div class="kpi-card">
             <div class="kpi-label">FATURAMENTO MÊS</div>
             <div class="kpi-value" style="color: #10b981;">R$ ${totalCost.toFixed(2)}</div>
-            <div class="kpi-sub">${tenantData.workOrders.length} OSs Registradas</div>
+            <div class="kpi-sub">${tenantData.services.length} Serviços Registrados</div>
           </div>
 
           <div class="kpi-card">
-            <div class="kpi-label">ATIVOS MONITORADOS</div>
-            <div class="kpi-value" style="color: #6366f1;">${tenantData.assets.length}</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">${tenantData.assets.length > 0 ? '100% com QR Code' : 'Nenhum ativo ainda'}</div>
+            <div class="kpi-label">CLIENTES & ATIVOS</div>
+            <div class="kpi-value" style="color: #6366f1;">${tenantData.clients.length}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${tenantData.equipment.length} equipamentos</div>
           </div>
 
           <div class="kpi-card">
@@ -246,7 +280,7 @@ class AppController {
 
         try {
           authService.registerUser({ fullName, companyName, email, phone, password });
-          alert(`Conta criada com sucesso para ${companyName}! Seu espaço de trabalho está limpo e pronto. Seu período gratuito de 30 dias foi iniciado.`);
+          alert(`Conta criada com sucesso para ${companyName}! Seu espaço de trabalho está limpo e pronto.`);
           this.currentViewMode = 'ADMIN_PANEL';
           this.navStack = [];
           this.renderRouterView();
@@ -401,7 +435,7 @@ class AppController {
       navBar.style.display = 'none';
       btnBack.style.display = 'none';
       kpiRow.style.display = 'grid';
-      sectionHeading.textContent = "MÓDULOS";
+      sectionHeading.textContent = "MÓDULOS OPERACIONAIS";
     }
 
     breadcrumbTrail.innerHTML = this.navStack.map((item, index) => {
@@ -417,9 +451,22 @@ class AppController {
       contentViewContainer.style.display = 'none';
       contentViewContainer.innerHTML = '';
 
+      // Prominent '+ Novo serviço' Bar on Level 0
+      let topActionBarHTML = '';
+      if (this.navStack.length === 1) {
+        topActionBarHTML = `
+          <div class="main-new-service-bar" style="grid-column: 1 / -1;">
+            <button class="btn-main-new-service" id="btn-home-main-new-service">
+              <i data-lucide="plus-circle" style="font-size: 1.4rem;"></i>
+              <span>+ Novo serviço</span>
+            </button>
+          </div>
+        `;
+      }
+
       const displayBlocks = current.blocks.slice(0, 8);
 
-      blockGridContainer.innerHTML = displayBlocks.map(block => `
+      blockGridContainer.innerHTML = topActionBarHTML + displayBlocks.map(block => `
         <div class="block-card" data-block-id="${block.id}">
           ${block.badge ? `<div class="notification-badge">${block.badge}</div>` : ''}
           <div class="block-icon-box ${block.iconBgClass || 'icon-box-emerald'}">
@@ -429,6 +476,11 @@ class AppController {
           ${block.desc ? `<div class="block-card-desc">${block.desc}</div>` : ''}
         </div>
       `).join('');
+
+      const btnHomeNew = document.getElementById('btn-home-main-new-service');
+      if (btnHomeNew) {
+        btnHomeNew.addEventListener('click', () => this.startNewServiceWizard());
+      }
 
       blockGridContainer.querySelectorAll('.block-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -461,11 +513,100 @@ class AppController {
     const sub = user ? subscriptionService.getTenantSubscription(user.tenantId) : null;
     const tenantData = this.getActiveTenantData();
 
+    // Friendly empty state first time
+    if (tenantData.services.length === 0) {
+      return {
+        title: "Painel do Gestor",
+        subtitle: "Módulos de gestão de ativos e serviços",
+        breadcrumbTitle: "Painel Principal",
+        renderContent: () => `
+          <div class="card" style="text-align: center; padding: 48px 24px; max-width: 650px; margin: 0 auto;">
+            <div class="block-icon-box icon-box-emerald" style="margin: 0 auto 20px; width: 64px; height: 64px; font-size: 2rem;">
+              <i data-lucide="wrench"></i>
+            </div>
+            <h2 style="color: #0f172a; margin-bottom: 10px;">Você ainda não cadastrou nenhum serviço</h2>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 28px; line-height: 1.5;">
+              Cadastre o cliente, o equipamento e as fotos da manutenção em poucos passos guiados.
+            </p>
+            
+            <button class="btn-main-new-service" id="btn-empty-start-wizard" style="max-width: 320px; margin: 0 auto 24px;">
+              <i data-lucide="plus-circle"></i> Criar Meu Primeiro Serviço
+            </button>
+          </div>
+
+          <div class="section-heading" style="margin-top: 36px;">OUTROS MÓDULOS DO SISTEMA</div>
+          <div class="block-grid">
+            <div class="block-card" id="card-empty-mod-clients">
+              <div class="block-icon-box icon-box-blue">
+                <i data-lucide="users"></i>
+              </div>
+              <div class="block-card-title">Clientes</div>
+              <div class="block-card-desc">Cadastro e consulta de clientes</div>
+            </div>
+
+            <div class="block-card" id="card-empty-mod-sub">
+              <div class="block-icon-box icon-box-purple">
+                <i data-lucide="credit-card"></i>
+              </div>
+              <div class="block-card-title">Plano e Assinatura</div>
+              <div class="block-card-desc">Gestão dos 30 dias de trial</div>
+            </div>
+          </div>
+        `,
+        onContentLoaded: () => {
+          const btnStart = document.getElementById('btn-empty-start-wizard');
+          if (btnStart) btnStart.addEventListener('click', () => this.startNewServiceWizard());
+
+          const cardClients = document.getElementById('card-empty-mod-clients');
+          if (cardClients) cardClients.addEventListener('click', () => this.pushLevel(this.getCustomersLevel1Config()));
+
+          const cardSub = document.getElementById('card-empty-mod-sub');
+          if (cardSub) cardSub.addEventListener('click', () => this.pushLevel(this.getSubscriptionManagementLevel1Config()));
+        }
+      };
+    }
+
     return {
       title: "Painel do Gestor",
       subtitle: "Módulos de gestão de ativos e serviços",
       breadcrumbTitle: "Painel Principal",
       blocks: [
+        {
+          id: "mod-new-service-btn",
+          title: "+ Novo serviço",
+          desc: "Fluxo curto guiado em 4 etapas",
+          icon: "plus-circle",
+          iconBgClass: "icon-box-emerald",
+          badge: "Criar",
+          onClick: () => this.startNewServiceWizard()
+        },
+        {
+          id: "mod-services-list",
+          title: "Serviços Cadastrados",
+          desc: "Visualizar histórico & Ordens de Serviço",
+          icon: "wrench",
+          iconBgClass: "icon-box-purple",
+          badge: `${tenantData.services.length}`,
+          onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
+        },
+        {
+          id: "mod-clients-list",
+          title: "Clientes",
+          desc: "Cadastro e parques por cliente",
+          icon: "users",
+          iconBgClass: "icon-box-blue",
+          badge: `${tenantData.clients.length}`,
+          onClick: () => this.pushLevel(this.getCustomersLevel1Config())
+        },
+        {
+          id: "mod-subscription",
+          title: "Plano e Assinatura",
+          desc: "Período gratuito & gestão de planos",
+          icon: "credit-card",
+          iconBgClass: "icon-box-indigo",
+          badge: sub ? `${sub.remainingDays} dias` : "30 dias",
+          onClick: () => this.pushLevel(this.getSubscriptionManagementLevel1Config())
+        },
         {
           id: "mod-assets",
           title: "Ativos Patrimoniais",
@@ -476,29 +617,11 @@ class AppController {
           onClick: () => this.pushLevel(this.getAssetsLevel1Config())
         },
         {
-          id: "mod-work-orders",
-          title: "Ordens de Serviço",
-          desc: "Preventiva, corretiva & checklists",
-          icon: "wrench",
-          iconBgClass: "icon-box-purple",
-          badge: `${tenantData.workOrders.filter(w => w.status !== 'FINISHED').length}`,
-          onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
-        },
-        {
-          id: "mod-subscription",
-          title: "Plano e Assinatura",
-          desc: "Período gratuito & gestão de planos",
-          icon: "credit-card",
-          iconBgClass: "icon-box-blue",
-          badge: sub ? `${sub.remainingDays} dias` : "30 dias",
-          onClick: () => this.pushLevel(this.getSubscriptionManagementLevel1Config())
-        },
-        {
           id: "mod-pmoc",
           title: "PMOC & Preventivas",
           desc: "Planos de manutenção & laudo sanitário",
           icon: "calendar-check",
-          iconBgClass: "icon-box-indigo",
+          iconBgClass: "icon-box-cyan",
           badge: tenantData.pmocPlans.length > 0 ? "96%" : "0",
           onClick: () => this.pushLevel(this.getPMOCLevel1Config())
         },
@@ -516,27 +639,9 @@ class AppController {
           title: "Leitor QR Code",
           desc: "Escaneamento de ativos em campo",
           icon: "qr-code",
-          iconBgClass: "icon-box-emerald",
+          iconBgClass: "icon-box-dark",
           badge: "PWA",
           onClick: () => this.pushLevel(this.getQRScannerLevel1Config())
-        },
-        {
-          id: "mod-ai-insights",
-          title: "IA & Predição",
-          desc: "Risco de falhas & auditoria visual",
-          icon: "sparkles",
-          iconBgClass: "icon-box-pink",
-          badge: `${tenantData.aiInsights.length}`,
-          onClick: () => this.pushLevel(this.getAILevel1Config())
-        },
-        {
-          id: "mod-customers",
-          title: "Clientes & Locais",
-          desc: "Parques de equipamentos por cliente",
-          icon: "building-2",
-          iconBgClass: "icon-box-orange",
-          badge: `${tenantData.customers.length}`,
-          onClick: () => this.pushLevel(this.getCustomersLevel1Config())
         }
       ]
     };
@@ -565,7 +670,149 @@ class AppController {
     };
   }
 
-  // Level 1: Assets Sub-menu (With Clean Empty State Support)
+  // Level 1: Customers View
+  getCustomersLevel1Config() {
+    const tenantData = this.getActiveTenantData();
+    const clients = tenantData.clients || [];
+
+    return {
+      title: "Clientes Cadastrados",
+      subtitle: "Cadastro simples de clientes e locais de atendimento.",
+      breadcrumbTitle: "Clientes",
+      renderContent: () => {
+        if (clients.length === 0) {
+          return `
+            <div class="card" style="text-align: center; padding: 48px 24px;">
+              <i data-lucide="users" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
+              <h3 style="margin-bottom: 8px;">Nenhum Cliente Cadastrado</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+                Crie um novo serviço para cadastrar seu primeiro cliente de forma guiada.
+              </p>
+              <button class="btn btn-primary" id="btn-client-empty-new-service">
+                <i data-lucide="plus-circle"></i> + Novo Serviço
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            ${clients.map(c => `
+              <div class="card">
+                <h3 style="font-size: 1.1rem; color: #0f172a; margin-bottom: 6px;">${c.name}</h3>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">📞 ${c.phone}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">📍 ${c.address || 'Sem endereço'}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      },
+      onContentLoaded: () => {
+        const btnEmpty = document.getElementById('btn-client-empty-new-service');
+        if (btnEmpty) btnEmpty.addEventListener('click', () => this.startNewServiceWizard());
+      }
+    };
+  }
+
+  // Level 1: Work Orders Sub-menu
+  getWorkOrdersLevel1Config() {
+    const tenantData = this.getActiveTenantData();
+
+    return {
+      title: "Módulo de Ordens de Serviço",
+      subtitle: "Gerencie chamados de campo, preventivas e checklists.",
+      breadcrumbTitle: "Ordens de Serviço",
+      blocks: [
+        {
+          id: "sub-new-service-direct",
+          title: "+ Novo serviço",
+          desc: "Iniciar fluxo curto em 4 etapas",
+          icon: "plus-circle",
+          iconBgClass: "icon-box-emerald",
+          badge: "Novo",
+          onClick: () => this.startNewServiceWizard()
+        },
+        {
+          id: "sub-active-os",
+          title: "Serviços em Andamento",
+          desc: "Atendimentos abertos ou executando",
+          icon: "clock",
+          iconBgClass: "icon-box-amber",
+          badge: `${(tenantData.services || []).filter(w => w.status !== 'Concluído').length}`,
+          onClick: () => this.pushLevel(this.getWorkOrdersContentView('Aberto'))
+        }
+      ]
+    };
+  }
+
+  getWorkOrdersContentView(statusFilter) {
+    const tenantData = this.getActiveTenantData();
+    const services = tenantData.services || [];
+
+    return {
+      title: "Ordens de Serviço",
+      subtitle: "Lista de chamados técnicos e manutenções.",
+      breadcrumbTitle: "Lista de OS",
+      renderContent: () => {
+        if (services.length === 0) {
+          return `
+            <div class="card" style="text-align: center; padding: 48px 24px;">
+              <i data-lucide="wrench" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
+              <h3 style="margin-bottom: 8px;">Nenhuma Ordem de Serviço Encontrada</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">
+                Clique abaixo para cadastrar seu primeiro serviço.
+              </p>
+              <button class="btn btn-primary" id="btn-os-empty-new-service">
+                <i data-lucide="plus-circle"></i> + Novo Serviço
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Nº Serviço</th><th>Cliente</th><th>Equipamento</th><th>Status</th><th>Ações</th></tr>
+              </thead>
+              <tbody>
+                ${services.map(wo => `
+                  <tr>
+                    <td><strong style="color: var(--primary);">${wo.serviceNumber}</strong></td>
+                    <td>${wo.clientName}</td>
+                    <td>${wo.equipmentBrand || ''} ${wo.equipmentModel || ''}</td>
+                    <td><span class="badge ${wo.status === 'Concluído' ? 'badge-success' : 'badge-info'}">${wo.status}</span></td>
+                    <td>
+                      <button class="btn btn-secondary btn-open-service-detail" data-id="${wo.id}">
+                        <i data-lucide="eye"></i> Ver Serviço
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
+      onContentLoaded: () => {
+        const btnEmpty = document.getElementById('btn-os-empty-new-service');
+        if (btnEmpty) btnEmpty.addEventListener('click', () => this.startNewServiceWizard());
+
+        document.querySelectorAll('.btn-open-service-detail').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            this.pushLevel({
+              title: "Detalhamento do Serviço",
+              breadcrumbTitle: "Ver Serviço",
+              renderContent: () => renderServiceDetailView(id)
+            });
+          });
+        });
+      }
+    };
+  }
+
+  // Level 1: Assets Sub-menu
   getAssetsLevel1Config() {
     const tenantData = this.getActiveTenantData();
 
@@ -619,7 +866,7 @@ class AppController {
               <i data-lucide="box" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
               <h3 style="margin-bottom: 8px;">Seu Parque de Ativos está Limpo</h3>
               <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px; margin: 0 auto 24px;">
-                Você ainda não possui nenhum equipamento cadastrado em sua empresa. Clique no botão abaixo para adicionar seu primeiro ativo e gerar a etiqueta de QR Code.
+                Você ainda não possui nenhum equipamento cadastrado. Clique no botão abaixo para adicionar seu primeiro ativo.
               </p>
               <button class="btn btn-primary" id="btn-empty-add-asset">
                 <i data-lucide="plus-circle"></i> Cadastrar Primeiro Ativo
@@ -652,246 +899,56 @@ class AppController {
             document.getElementById('modal-add-asset').classList.add('active');
           });
         }
-
-        document.querySelectorAll('.asset-card-item').forEach(card => {
-          card.addEventListener('click', () => {
-            const id = card.getAttribute('data-id');
-            const asset = assetsList.find(a => a.id === id);
-            if (asset) this.openAssetDetailModal(asset);
-          });
-        });
       }
     };
   }
 
-  // Level 1: Work Orders Sub-menu
-  getWorkOrdersLevel1Config() {
-    const tenantData = this.getActiveTenantData();
-
-    return {
-      title: "Módulo de Ordens de Serviço",
-      subtitle: "Gerencie chamados de campo, preventivas e checklists.",
-      breadcrumbTitle: "Ordens de Serviço",
-      blocks: [
-        {
-          id: "sub-active-os",
-          title: "OSs em Andamento",
-          desc: "Atendimentos sendo executados",
-          icon: "clock",
-          iconBgClass: "icon-box-amber",
-          badge: `${tenantData.workOrders.filter(w => w.status !== 'FINISHED').length}`,
-          onClick: () => this.pushLevel(this.getWorkOrdersContentView('IN_PROGRESS'))
-        }
-      ]
-    };
-  }
-
-  getWorkOrdersContentView(statusFilter) {
-    const tenantData = this.getActiveTenantData();
-    const filtered = statusFilter ? tenantData.workOrders.filter(w => w.status === statusFilter) : tenantData.workOrders;
-
-    return {
-      title: "Ordens de Serviço",
-      subtitle: "Lista de chamados técnicos e manutenções.",
-      breadcrumbTitle: "Lista de OS",
-      renderContent: () => {
-        if (filtered.length === 0) {
-          return `
-            <div class="card" style="text-align: center; padding: 48px 24px;">
-              <i data-lucide="wrench" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
-              <h3 style="margin-bottom: 8px;">Nenhuma Ordem de Serviço Encontrada</h3>
-              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px; margin: 0 auto 24px;">
-                Não existem chamados ou ordens de serviço pendentes no momento para o seu espaço de trabalho.
-              </p>
-            </div>
-          `;
-        }
-
-        return `
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr><th>Nº OS</th><th>Ativo</th><th>Cliente</th><th>Status</th><th>Ações</th></tr>
-              </thead>
-              <tbody>
-                ${filtered.map(wo => `
-                  <tr>
-                    <td><strong>${wo.osNumber}</strong></td>
-                    <td>${wo.assetTag}</td>
-                    <td>${wo.customerName}</td>
-                    <td><span class="badge badge-info">${wo.status}</span></td>
-                    <td>
-                      <button class="btn btn-secondary btn-open-os" data-id="${wo.id}">
-                        <i data-lucide="play"></i> Executar OS
-                      </button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `;
-      },
-      onContentLoaded: () => {
-        document.querySelectorAll('.btn-open-os').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-id');
-            const wo = filtered.find(w => w.id === id);
-            if (wo) this.openWorkOrderExecModal(wo);
-          });
-        });
-      }
-    };
-  }
-
-  // Level 1: PMOC Sub-menu
   getPMOCLevel1Config() {
-    const tenantData = this.getActiveTenantData();
-
     return {
-      title: "Módulo PMOC & Manutenção Preventiva",
-      subtitle: "Gestão do Plano de Manutenção, Operação e Controle.",
-      breadcrumbTitle: "PMOC & Preventivas",
-      blocks: [
-        {
-          id: "sub-pmoc-schedule",
-          title: "Cronograma de Preventivas",
-          desc: "Visualizar inspeções periódicas agendadas",
-          icon: "calendar",
-          iconBgClass: "icon-box-indigo",
-          badge: `${tenantData.pmocPlans.length} Planos`,
-          onClick: () => this.pushLevel(this.getPMOCScheduleContentView())
-        }
-      ]
+      title: "Módulo PMOC & Preventivas",
+      subtitle: "Planos de manutenção.",
+      breadcrumbTitle: "PMOC",
+      renderContent: () => `<div class="card">Módulo PMOC Ativo.</div>`
     };
   }
 
-  getPMOCScheduleContentView() {
-    const tenantData = this.getActiveTenantData();
-
-    return {
-      title: "Cronograma PMOC",
-      subtitle: "Rotinas preventivas periódicas.",
-      breadcrumbTitle: "Cronograma PMOC",
-      renderContent: () => {
-        if (tenantData.pmocPlans.length === 0) {
-          return `
-            <div class="card" style="text-align: center; padding: 48px 24px;">
-              <i data-lucide="calendar-check" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
-              <h3 style="margin-bottom: 8px;">Nenhum Plano PMOC Configurado</h3>
-              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px; margin: 0 auto 24px;">
-                Cadastre seus ativos para configurar a periodicidade e a rotina preventiva de manutenção.
-              </p>
-            </div>
-          `;
-        }
-
-        return `
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr><th>Ativo</th><th>Cliente</th><th>Periodicidade</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                ${tenantData.pmocPlans.map(plan => `
-                  <tr>
-                    <td><strong>${plan.assetTag}</strong></td>
-                    <td>${plan.customerName}</td>
-                    <td><span class="badge badge-info">${plan.frequency}</span></td>
-                    <td><span class="badge badge-success">${plan.status}</span></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        `;
-      }
-    };
-  }
-
-  // Level 1: Other Sub-menus
   getPWAOfflineLevel1Config() {
     return {
-      title: "Módulo PWA & Sincronização Offline",
-      subtitle: "Suporte a execução de serviços em locais sem sinal de celular.",
-      breadcrumbTitle: "PWA Offline",
-      blocks: [
-        {
-          id: "sub-pwa-queue",
-          title: "Fila de Sincronização Pendente",
-          desc: "Registros salvos localmente aguardando reconexão",
-          icon: "refresh-cw",
-          iconBgClass: "icon-box-amber",
-          badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length} Pendente`,
-          onClick: () => this.pushLevel({
-            title: "Fila de Sincronização",
-            breadcrumbTitle: "Fila PWA",
-            renderContent: () => `<div class="card">Nenhum atendimento pendente de transmissão.</div>`
-          })
-        }
-      ]
+      title: "Modo PWA Offline",
+      subtitle: "Sincronização sem internet.",
+      breadcrumbTitle: "PWA",
+      renderContent: () => `<div class="card">Sincronizador PWA Ativo.</div>`
     };
   }
 
   getAILevel1Config() {
-    const tenantData = this.getActiveTenantData();
     return {
-      title: "Módulo IA & Predição",
-      subtitle: "Inteligência artificial operacional.",
-      breadcrumbTitle: "IA Operacional",
-      blocks: [
-        {
-          id: "sub-ai-insights",
-          title: "Matriz Preditiva IA",
-          desc: "Alertas de risco",
-          icon: "sparkles",
-          iconBgClass: "icon-box-pink",
-          badge: `${tenantData.aiInsights.length}`,
-          onClick: () => alert("Visualizando matriz preditiva.")
-        }
-      ]
+      title: "Módulo IA",
+      subtitle: "Predição por inteligência artificial.",
+      breadcrumbTitle: "IA",
+      renderContent: () => `<div class="card">Assistente IA Ativo.</div>`
     };
   }
 
   getFinancialLevel1Config() {
-    const tenantData = this.getActiveTenantData();
     return {
-      title: "Módulo Financeiro & Peças",
-      subtitle: "Estoque de peças e faturamento.",
-      breadcrumbTitle: "Financeiro & Peças",
-      blocks: [
-        {
-          id: "sub-parts-stock",
-          title: "Estoque de Peças",
-          desc: "Catálogo de peças & almoxarifado",
-          icon: "package",
-          iconBgClass: "icon-box-blue",
-          badge: `${tenantData.partsInventory.length}`,
-          onClick: () => alert("Visualizando catálogo de peças.")
-        }
-      ]
+      title: "Financeiro & Peças",
+      subtitle: "Faturamento e estoque.",
+      breadcrumbTitle: "Financeiro",
+      renderContent: () => `<div class="card">Módulo Financeiro Ativo.</div>`
     };
   }
 
   getQRScannerLevel1Config() {
     return {
-      title: "Leitor de QR Code",
-      subtitle: "Câmera PWA ativa.",
-      breadcrumbTitle: "QR Code",
-      renderContent: () => `<div class="card" style="text-align: center; padding: 40px;">Câmera PWA ativa para leitura de QR Code.</div>`
+      title: "Leitor QR Code",
+      subtitle: "Câmera PWA.",
+      breadcrumbTitle: "QR Scanner",
+      renderContent: () => `<div class="card" style="text-align: center; padding: 40px;">Câmera PWA ativa.</div>`
     };
   }
 
-  getCustomersLevel1Config() {
-    return {
-      title: "Clientes & Locais",
-      subtitle: "Gestão de parques de equipamentos por cliente.",
-      breadcrumbTitle: "Clientes",
-      renderContent: () => `<div class="card">Lista de Clientes Cadastrados</div>`
-    };
-  }
-
-  // Modals Setup & Data Handlers
+  // Setup Global Events & Modals
   setupGlobalEvents() {
     const btnHome = document.getElementById('btn-go-home');
     if (btnHome) btnHome.addEventListener('click', () => this.resetToHome());
@@ -966,7 +1023,7 @@ class AppController {
           categoryId: categoryId,
           categoryName: 'Equipamento Geral',
           customerId: customerId,
-          customerName: customerId === 'cust-001' ? 'Hospital Central São Lucas' : 'Condomínio Torre Sul',
+          customerName: 'Cliente Cadastrado',
           locationName: 'Local Principal',
           model: model,
           serialNumber: serial,
@@ -974,7 +1031,6 @@ class AppController {
           history: [{ date: new Date().toISOString().split('T')[0], type: 'INSTALLATION', text: 'Ativo cadastrado.' }]
         };
 
-        // Save to active tenant's isolated data
         tenantDataService.addAsset(user.tenantId, newAsset);
 
         document.getElementById('modal-add-asset').classList.remove('active');
@@ -983,43 +1039,6 @@ class AppController {
         alert(`Ativo ${tag} cadastrado com sucesso!`);
       });
     }
-  }
-
-  openAssetDetailModal(asset) {
-    document.getElementById('modal-detail-tag').textContent = asset.tagName;
-    document.getElementById('modal-detail-customer').textContent = `${asset.customerName} - ${asset.locationName || 'Local Principal'}`;
-    document.getElementById('modal-detail-model').textContent = `${asset.model}`;
-    document.getElementById('modal-detail-status').textContent = 'INSTALADO';
-
-    const historyContainer = document.getElementById('modal-detail-history');
-    historyContainer.innerHTML = (asset.history || []).map(item => `
-      <div style="font-size: 0.85rem; border-left: 2px solid var(--primary); padding-left: 10px;">
-        <div style="font-weight: 600; color: var(--primary);">${item.date} - ${item.type}</div>
-        <div style="color: var(--text-muted);">${item.text}</div>
-      </div>
-    `).join('');
-
-    document.getElementById('modal-asset-detail').classList.add('active');
-  }
-
-  openWorkOrderExecModal(wo) {
-    this.activeWorkOrder = wo;
-    document.getElementById('os-exec-title').textContent = `Execução da ${wo.osNumber}`;
-    document.getElementById('os-exec-asset-tag').textContent = wo.assetTag;
-
-    const checklistContainer = document.getElementById('os-exec-checklist-group');
-    checklistContainer.innerHTML = (wo.checklists || []).map(c => `
-      <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #f8fafc; border-radius: var(--radius-sm); cursor: pointer;">
-        <input type="checkbox" ${c.isChecked ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary);">
-        <span style="font-size: 0.85rem;">${c.label}</span>
-      </label>
-    `).join('');
-
-    if (this.signaturePad) {
-      this.signaturePad.resizeCanvas();
-    }
-
-    document.getElementById('modal-os-exec').classList.add('active');
   }
 }
 
