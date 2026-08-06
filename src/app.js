@@ -994,6 +994,14 @@ class AppController {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.app = new AppController();
-});
+function startApp() {
+  if (!window.app) {
+    window.app = new AppController();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
