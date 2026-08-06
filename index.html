@@ -33,7 +33,7 @@
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3652/3652191.png">
 
   <!-- Fonts & Icons -->
-  <link rel="stylesheet" href="src/assets/styles/main.css">
+  <link rel="stylesheet" href="src/assets/styles/main.css?v=2.2.3">
   <script src="https://unpkg.com/lucide@latest" defer></script>
 
   <!-- Global Error Boundary -->
@@ -118,12 +118,12 @@
   <!-- Register the new pass-through Service Worker (replaces old caching one) -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(function() {});
+      navigator.serviceWorker.register('./sw.js?v=2.2.3').catch(function() {});
     }
   </script>
 
   <!-- Application Logic -->
-  <script type="module" src="src/app.js"></script>
+  <script type="module" src="src/app.js?v=2.2.3"></script>
 
 </body>
 </html>
