@@ -3,8 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SaaS Asset Management - Painel do Gestor</title>
+  <title>SaaS Asset Management - Painel do Gestor (PWA Offline Ready)</title>
   
+  <!-- PWA Manifest & Web Icons -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3652/3652191.png">
+
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="src/assets/styles/main.css">
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -12,7 +17,7 @@
 <body>
 
   <div id="app">
-    <!-- Topbar Header (Exact Match missoes-da-loja screenshot) -->
+    <!-- Topbar Header (Exact Match missoes-da-loja screenshot + PWA Offline Indicator) -->
     <header class="topbar">
       <div class="brand-container" id="btn-go-home" title="Ir para a Tela Inicial">
         <div class="brand-icon">
@@ -25,6 +30,12 @@
       </div>
 
       <div class="topbar-right">
+        <!-- PWA Connectivity Status Pill -->
+        <div class="tenant-pill" id="pwa-status-pill" style="background-color: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #059669;">
+          <i data-lucide="wifi"></i>
+          <span>ONLINE</span>
+        </div>
+
         <div class="user-role-badge">
           <span>👑 GESTOR</span>
           <span style="color: #92400e;">06/08/2026</span>
@@ -39,7 +50,7 @@
     <!-- Main Container -->
     <main class="main-container">
       
-      <!-- Top Row Summary KPI Cards (Exact Match screenshot top row) -->
+      <!-- Top Row Summary KPI Cards -->
       <div class="kpi-row" id="kpi-summary-row">
         <div class="kpi-card">
           <div class="kpi-label">FATURAMENTO HOJE</div>
@@ -60,13 +71,13 @@
         </div>
 
         <div class="kpi-card">
-          <div class="kpi-label">PEÇAS EM ESTOQUE</div>
-          <div class="kpi-value">222</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">itens em estoque</div>
+          <div class="kpi-label">STATUS PWA CAMPO</div>
+          <div class="kpi-value" style="color: #10b981;">OFFLINE</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">pronto para subsolos</div>
         </div>
       </div>
 
-      <!-- Navigation & Breadcrumb Bar (Hidden on Level 0 Home, Visible on Levels > 0) -->
+      <!-- Navigation & Breadcrumb Bar -->
       <div class="navigation-bar" id="navigation-bar" style="display: none;">
         <button class="btn-back" id="btn-nav-back">
           <i data-lucide="arrow-left"></i>
@@ -291,6 +302,17 @@
     </div>
     <div style="font-size: 9px; margin-top: 6px;" id="print-hash">QR-GER-ALFA-9081</div>
   </div>
+
+  <!-- Register PWA Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('[PWA] Service Worker registrado com sucesso:', reg.scope))
+          .catch(err => console.log('[PWA] Erro ao registrar Service Worker:', err));
+      });
+    }
+  </script>
 
   <!-- Application Logic Modules -->
   <script type="module" src="src/app.js"></script>

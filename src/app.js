@@ -1,8 +1,8 @@
 /* ==========================================================================
-   APP MAIN CONTROLLER - BLOCK-BASED NAVIGATION WITH PMOC MODULE (OPTION 1)
+   APP MAIN CONTROLLER - BLOCK-BASED NAVIGATION WITH PWA OFFLINE SYNC (OPTION 3)
    ========================================================================== */
 
-import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights, pmocPlans } from './mock-data.js';
+import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights, pmocPlans, offlineSyncQueue } from './mock-data.js';
 import { CanvasSignaturePad } from './components/canvas-signature.js';
 
 class AppController {
@@ -10,18 +10,54 @@ class AppController {
     this.navStack = [];
     this.signaturePad = null;
     this.activeWorkOrder = null;
+    this.isOnline = navigator.onLine;
 
     this.init();
   }
 
   init() {
     this.setupGlobalEvents();
+    this.setupNetworkStatusListener();
     this.setupModalHandlers();
     this.setupSignaturePad();
     this.setupForms();
 
     // Start at Level 0: Home Dashboard
     this.pushLevel(this.getLevel0Config());
+  }
+
+  setupNetworkStatusListener() {
+    const updatePill = () => {
+      this.isOnline = navigator.onLine;
+      const pill = document.getElementById('pwa-status-pill');
+      if (!pill) return;
+
+      if (this.isOnline) {
+        pill.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+        pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        pill.style.color = '#059669';
+        pill.innerHTML = `<i data-lucide="wifi"></i> <span>ONLINE</span>`;
+
+        // Check if there are pending offline items to sync
+        const pendingCount = offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length;
+        if (pendingCount > 0) {
+          offlineSyncQueue.forEach(q => q.status = 'SYNCED');
+          alert(`✓ Conexão reestabelecida! ${pendingCount} registro(s) salvo(s) offline foram sincronizados com a nuvem.`);
+          this.renderCurrentLevel();
+        }
+      } else {
+        pill.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+        pill.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        pill.style.color = '#d97706';
+        pill.innerHTML = `<i data-lucide="wifi-off"></i> <span>MODO OFFLINE (PWA)</span>`;
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+    };
+
+    window.addEventListener('online', updatePill);
+    window.addEventListener('offline', updatePill);
+    updatePill();
   }
 
   pushLevel(levelConfig) {
@@ -148,6 +184,15 @@ class AppController {
           onClick: () => this.pushLevel(this.getPMOCLevel1Config())
         },
         {
+          id: "mod-pwa-offline",
+          title: "PWA & Offline Sync",
+          desc: "Modo sem internet & fila de sincronização",
+          icon: "wifi-off",
+          iconBgClass: "icon-box-amber",
+          badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length}`,
+          onClick: () => this.pushLevel(this.getPWAOfflineLevel1Config())
+        },
+        {
           id: "mod-qr-scanner",
           title: "Leitor QR Code",
           desc: "Escaneamento de ativos em campo",
@@ -182,20 +227,126 @@ class AppController {
           iconBgClass: "icon-box-orange",
           badge: `${customers.length}`,
           onClick: () => this.pushLevel(this.getCustomersLevel1Config())
-        },
-        {
-          id: "mod-settings",
-          title: "Configurações",
-          desc: "Plano SaaS, RLS & regras SLA",
-          icon: "settings",
-          iconBgClass: "icon-box-dark",
-          onClick: () => this.pushLevel(this.getSettingsLevel1Config())
         }
       ]
     };
   }
 
-  // Level 1: PMOC & Preventives Sub-menu (Option 1)
+  // Level 1: PWA Offline & Sync Sub-menu (Option 3)
+  getPWAOfflineLevel1Config() {
+    return {
+      title: "Módulo PWA & Sincronização Offline",
+      subtitle: "Suporte a execução de serviços em locais sem sinal de celular (subsolos/casas de máquinas).",
+      breadcrumbTitle: "PWA Offline",
+      blocks: [
+        {
+          id: "sub-pwa-queue",
+          title: "Fila de Sincronização Pendente",
+          desc: "Registros salvos localmente aguardando reconexão",
+          icon: "refresh-cw",
+          iconBgClass: "icon-box-amber",
+          badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length} Pendente`,
+          onClick: () => this.pushLevel(this.getPWASyncQueueContentView())
+        },
+        {
+          id: "sub-pwa-simulate",
+          title: "Simular Modo Sem Internet",
+          desc: "Alternar entre modo Online e Offline para testar o salvamento em campo",
+          icon: "toggle-left",
+          iconBgClass: "icon-box-purple",
+          onClick: () => this.toggleSimulatedOfflineMode()
+        },
+        {
+          id: "sub-pwa-cache-status",
+          title: "Status do Cache Local (PWA)",
+          desc: "Verificar arquivos estáticos pre-carregados no smartphone do técnico",
+          icon: "hard-drive",
+          iconBgClass: "icon-box-emerald",
+          badge: "Cache V1.6",
+          onClick: () => alert("PWA Status: Todos os arquivos de App Shell (HTML/CSS/JS) e bibliotecas estão 100% em cache no dispositivo!")
+        }
+      ]
+    };
+  }
+
+  toggleSimulatedOfflineMode() {
+    this.isOnline = !this.isOnline;
+    const pill = document.getElementById('pwa-status-pill');
+    if (pill) {
+      if (this.isOnline) {
+        pill.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+        pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        pill.style.color = '#059669';
+        pill.innerHTML = `<i data-lucide="wifi"></i> <span>ONLINE</span>`;
+        alert("Modo alterado para: ONLINE");
+      } else {
+        pill.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+        pill.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        pill.style.color = '#d97706';
+        pill.innerHTML = `<i data-lucide="wifi-off"></i> <span>MODO OFFLINE (SIMULADO)</span>`;
+        alert("Modo alterado para: OFFLINE. Qualquer serviço concluído agora será salvo na Fila Local IndexedDB!");
+      }
+    }
+    if (window.lucide) window.lucide.createIcons();
+  }
+
+  getPWASyncQueueContentView() {
+    return {
+      title: "Fila de Sincronização Offline (IndexedDB)",
+      subtitle: "Lista de atendimentos realizados sem internet que serão transmitidos quando recuperar sinal.",
+      breadcrumbTitle: "Fila de Sincronização",
+      renderContent: () => `
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3>Registros Pendentes de Transmissão</h3>
+            <button class="btn btn-primary" id="btn-force-sync">
+              <i data-lucide="refresh-cw"></i> Sincronizar Agora com a Nuvem
+            </button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nº OS</th>
+                  <th>Ativo</th>
+                  <th>Horário Salvo</th>
+                  <th>Detalhes do Atendimento</th>
+                  <th>Status na Fila</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${offlineSyncQueue.map(item => `
+                  <tr>
+                    <td><strong style="color: var(--primary);">${item.osNumber}</strong></td>
+                    <td><strong>${item.assetTag}</strong></td>
+                    <td>${item.timestamp}</td>
+                    <td>${item.details}</td>
+                    <td>
+                      <span class="badge ${item.status === 'SYNCED' ? 'badge-success' : 'badge-warning'}">
+                        ${item.status === 'SYNCED' ? 'Sincronizado' : 'Aguardando Sinal'}
+                      </span>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `,
+      onContentLoaded: () => {
+        const btnSync = document.getElementById('btn-force-sync');
+        if (btnSync) {
+          btnSync.addEventListener('click', () => {
+            offlineSyncQueue.forEach(q => q.status = 'SYNCED');
+            alert("✓ Sincronização forçada concluída! Todos os registros locais foram transmitidos para o servidor principal.");
+            this.renderCurrentLevel();
+          });
+        }
+      }
+    };
+  }
+
+  // Level 1: PMOC & Preventives Sub-menu
   getPMOCLevel1Config() {
     return {
       title: "Módulo PMOC & Manutenção Preventiva",
@@ -214,19 +365,11 @@ class AppController {
         {
           id: "sub-pmoc-report",
           title: "Laudo de Conformidade PMOC",
-          desc: "Emitir relatório sanitário com Anotação de Responsabilidade Técnica (ART)",
+          desc: "Emitir relatório sanitário oficial em PDF com ART",
           icon: "file-check-2",
           iconBgClass: "icon-box-emerald",
           badge: "PDF Oficial",
           onClick: () => this.pushLevel(this.getPMOCReportContentView())
-        },
-        {
-          id: "sub-pmoc-new-plan",
-          title: "Novo Plano de Manutenção",
-          desc: "Configurar periodicidade e checklist PMOC para um ativo",
-          icon: "plus-circle",
-          iconBgClass: "icon-box-purple",
-          onClick: () => alert("Selecione um Ativo na lista de Ativos para vincular um novo Plano PMOC.")
         }
       ]
     };
@@ -451,7 +594,7 @@ class AppController {
     };
   }
 
-  // Detailed PMOC Views (Option 1)
+  // Detailed PMOC Views
   getPMOCScheduleContentView() {
     return {
       title: "Cronograma de Inspeções Preventivas PMOC",
@@ -810,7 +953,24 @@ class AppController {
       btnFinishOs.addEventListener('click', () => {
         if (this.activeWorkOrder) {
           this.activeWorkOrder.status = 'FINISHED';
-          alert(`Ordem de Serviço ${this.activeWorkOrder.osNumber} concluída com sucesso! Laudo emitido.`);
+
+          // If offline, push to offline queue
+          if (!this.isOnline) {
+            offlineSyncQueue.unshift({
+              id: `sync-${Date.now()}`,
+              action: "WORK_ORDER_COMPLETE",
+              workOrderId: this.activeWorkOrder.id,
+              osNumber: this.activeWorkOrder.osNumber,
+              assetTag: this.activeWorkOrder.assetTag,
+              timestamp: new Date().toISOString(),
+              status: "PENDING_SYNC",
+              details: "Concluído em modo offline. Salvo localmente em IndexedDB."
+            });
+            alert(`⚡ MODO OFFLINE ATIVO: Ordem de Serviço ${this.activeWorkOrder.osNumber} salva localmente no dispositivo! Será sincronizada assim que você recuperar conexão.`);
+          } else {
+            alert(`Ordem de Serviço ${this.activeWorkOrder.osNumber} concluída com sucesso! Laudo emitido.`);
+          }
+
           document.getElementById('modal-os-exec').classList.remove('active');
           this.renderCurrentLevel();
         }
