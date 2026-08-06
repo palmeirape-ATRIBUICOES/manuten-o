@@ -1,8 +1,8 @@
 /* ==========================================================================
-   APP MAIN CONTROLLER - EXACT MATCH MISSOES-DA-LOJA BLOCK UI & COLORS
+   APP MAIN CONTROLLER - BLOCK-BASED NAVIGATION WITH PMOC MODULE (OPTION 1)
    ========================================================================== */
 
-import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights } from './mock-data.js';
+import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights, pmocPlans } from './mock-data.js';
 import { CanvasSignaturePad } from './components/canvas-signature.js';
 
 class AppController {
@@ -50,7 +50,6 @@ class AppController {
     const btnBack = document.getElementById('btn-nav-back');
     const breadcrumbTrail = document.getElementById('breadcrumb-trail');
 
-    // Toggle navigation bar visibility based on level depth
     if (this.navStack.length > 1) {
       navBar.style.display = 'flex';
       btnBack.style.display = 'inline-flex';
@@ -140,6 +139,15 @@ class AppController {
           onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
         },
         {
+          id: "mod-pmoc",
+          title: "PMOC & Preventivas",
+          desc: "Planos de manutenção & laudo sanitário",
+          icon: "calendar-check",
+          iconBgClass: "icon-box-indigo",
+          badge: "96%",
+          onClick: () => this.pushLevel(this.getPMOCLevel1Config())
+        },
+        {
           id: "mod-qr-scanner",
           title: "Leitor QR Code",
           desc: "Escaneamento de ativos em campo",
@@ -182,6 +190,43 @@ class AppController {
           icon: "settings",
           iconBgClass: "icon-box-dark",
           onClick: () => this.pushLevel(this.getSettingsLevel1Config())
+        }
+      ]
+    };
+  }
+
+  // Level 1: PMOC & Preventives Sub-menu (Option 1)
+  getPMOCLevel1Config() {
+    return {
+      title: "Módulo PMOC & Manutenção Preventiva",
+      subtitle: "Gestão do Plano de Manutenção, Operação e Controle conforme Portaria MS 3.523/98.",
+      breadcrumbTitle: "PMOC & Preventivas",
+      blocks: [
+        {
+          id: "sub-pmoc-schedule",
+          title: "Cronograma de Preventivas",
+          desc: "Visualizar inspeções periódicas agendadas",
+          icon: "calendar",
+          iconBgClass: "icon-box-indigo",
+          badge: `${pmocPlans.length} Planos`,
+          onClick: () => this.pushLevel(this.getPMOCScheduleContentView())
+        },
+        {
+          id: "sub-pmoc-report",
+          title: "Laudo de Conformidade PMOC",
+          desc: "Emitir relatório sanitário com Anotação de Responsabilidade Técnica (ART)",
+          icon: "file-check-2",
+          iconBgClass: "icon-box-emerald",
+          badge: "PDF Oficial",
+          onClick: () => this.pushLevel(this.getPMOCReportContentView())
+        },
+        {
+          id: "sub-pmoc-new-plan",
+          title: "Novo Plano de Manutenção",
+          desc: "Configurar periodicidade e checklist PMOC para um ativo",
+          icon: "plus-circle",
+          iconBgClass: "icon-box-purple",
+          onClick: () => alert("Selecione um Ativo na lista de Ativos para vincular um novo Plano PMOC.")
         }
       ]
     };
@@ -406,6 +451,84 @@ class AppController {
     };
   }
 
+  // Detailed PMOC Views (Option 1)
+  getPMOCScheduleContentView() {
+    return {
+      title: "Cronograma de Inspeções Preventivas PMOC",
+      subtitle: "Monitoramento de rotinas periódicas de manutenção técnica.",
+      breadcrumbTitle: "Cronograma PMOC",
+      renderContent: () => `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Ativo</th>
+                <th>Cliente & Local</th>
+                <th>Periodicidade</th>
+                <th>Última Inspeção</th>
+                <th>Próxima Inspeção</th>
+                <th>Conformidade</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pmocPlans.map(plan => `
+                <tr>
+                  <td><strong style="color: var(--primary);">${plan.assetTag}</strong></td>
+                  <td>${plan.customerName} - ${plan.locationName}</td>
+                  <td><span class="badge badge-info">${plan.frequency}</span></td>
+                  <td>${plan.lastInspectionDate}</td>
+                  <td><strong>${plan.nextInspectionDate}</strong></td>
+                  <td><strong style="color: var(--success);">${plan.compliancePercent}%</strong></td>
+                  <td><span class="badge ${plan.status === 'COMPLETED' ? 'badge-success' : 'badge-warning'}">${plan.status}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `
+    };
+  }
+
+  getPMOCReportContentView() {
+    return {
+      title: "Laudo Oficial de Conformidade PMOC",
+      subtitle: "Documento técnico com Anotação de Responsabilidade Técnica (ART) para vigilância sanitária.",
+      breadcrumbTitle: "Laudo PMOC",
+      renderContent: () => `
+        <div class="card" style="max-width: 750px; margin: 0 auto; border: 2px solid var(--primary);">
+          <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px;">
+            <div>
+              <h2 style="font-size: 1.3rem; color: #0f172a;">LAUDO DE CONFORMIDADE TÉCNICA - PMOC</h2>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Portaria Ministério da Saúde nº 3.523/1998 & Lei 13.589/2018</div>
+            </div>
+            <span class="badge badge-success" style="font-size: 0.85rem;">✓ AUDITADO & APROVADO</span>
+          </div>
+
+          <div style="font-size: 0.9rem; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+            <div><strong>Empresa Prestadora:</strong> ${currentTenant.name} (${currentTenant.cnpj})</div>
+            <div><strong>Responsável Técnico (ART):</strong> ${currentTenant.technicalResponsibilityART}</div>
+            <div><strong>Índice de Conformidade Global do Parque:</strong> <span style="color: var(--success); font-weight: 800;">96.4%</span></div>
+          </div>
+
+          <h4 style="font-size: 0.95rem; margin-bottom: 10px;">Equipamentos Cobertos pelo Laudo:</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
+            ${pmocPlans.map(p => `
+              <div style="padding: 10px 14px; background: #f8fafc; border-radius: var(--radius-sm); display: flex; justify-content: space-between; font-size: 0.85rem;">
+                <span><strong>${p.assetTag}</strong> - ${p.customerName}</span>
+                <span style="color: var(--success); font-weight: 700;">${p.compliancePercent}% Conforme (${p.frequency})</span>
+              </div>
+            `).join('')}
+          </div>
+
+          <button class="btn btn-primary" onclick="window.print()" style="width: 100%;">
+            <i data-lucide="printer"></i> Imprimir / Baixar Laudo Oficial em PDF
+          </button>
+        </div>
+      `
+    };
+  }
+
   // Detailed Content Views
   getAssetsListContentView() {
     return {
@@ -428,7 +551,7 @@ class AppController {
               <div style="font-size: 0.85rem; margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px;">
                 <div><strong>Cliente:</strong> ${a.customerName}</div>
                 <div><strong>Modelo:</strong> ${a.model}</div>
-                <div><strong>Saúde IA:</strong> <span style="color: ${a.healthIndexScore < 60 ? 'var(--danger)' : 'var(--success)'}; font-weight: 700;">${a.healthIndexScore || 95}%</span></div>
+                <div><strong>PMOC:</strong> <span class="badge badge-info">${a.pmocFrequency || 'MENSAL'}</span></div>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; pt-3; border-top: 1px solid var(--border-color);">
                 <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">${a.qrCodeHash}</span>

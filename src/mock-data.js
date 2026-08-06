@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MOCK DATA - SAAS ASSET MANAGEMENT (SPRINT 3 AI INCLUDED)
+   MOCK DATA - SAAS ASSET MANAGEMENT (OPTION 1: PMOC & PREVENTIVES INCLUDED)
    ========================================================================== */
 
 export const currentTenant = {
@@ -8,8 +8,67 @@ export const currentTenant = {
   cnpj: "12.345.678/0001-90",
   plan: "Professional",
   activeUsers: 8,
-  defaultLaborRatePerHour: 120.00
+  defaultLaborRatePerHour: 120.00,
+  technicalResponsibilityART: "CREA-PE 048912/D - Eng. Marcos Vinícius"
 };
+
+export const pmocPlans = [
+  {
+    id: "pmoc-001",
+    assetId: "asset-002",
+    assetTag: "CHILLER-CARRIER-01",
+    customerName: "Condomínio Empresarial Torre Sul",
+    locationName: "Cobertura - Central de Ar",
+    frequency: "MENSAL", // MENSAL, TRIMESTRAL, SEMESTRAL, ANUAL
+    lastInspectionDate: "2026-07-15",
+    nextInspectionDate: "2026-08-15",
+    status: "SCHEDULED", // SCHEDULED, OVERDUE, COMPLETED
+    compliancePercent: 96,
+    responsibleEngineer: "Eng. Marcos Vinícius (CREA-PE 048912)",
+    routineChecklist: [
+      "Limpeza e higienização dos serpetinas e bandeja de condensado",
+      "Medição do superaquecimento e subresfriamento do fluido refrigerante",
+      "Verificação de reaperto das conexões elétricas de potência",
+      "Análise microbiológica do ar (Portaria MS 3.523/98)"
+    ]
+  },
+  {
+    id: "pmoc-002",
+    assetId: "asset-001",
+    assetTag: "GER-500KVA-01",
+    customerName: "Hospital Central São Lucas",
+    locationName: "Subsolo 2 - Casa de Máquinas",
+    frequency: "SEMESTRAL",
+    lastInspectionDate: "2025-06-15",
+    nextInspectionDate: "2025-12-15",
+    status: "COMPLETED",
+    compliancePercent: 100,
+    responsibleEngineer: "Eng. Marcos Vinícius (CREA-PE 048912)",
+    routineChecklist: [
+      "Troca de óleo lubrificante de motor e elemento filtrante",
+      "Teste de carga com acionamento automático da QTA",
+      "Checagem do nível de eletrólito do banco de baterias"
+    ]
+  },
+  {
+    id: "pmoc-003",
+    assetId: "asset-003",
+    assetTag: "EMPILHADEIRA-HYSTER-02",
+    customerName: "Hospital Central São Lucas",
+    locationName: "Subsolo 2 - Casa de Máquinas",
+    frequency: "TRIMESTRAL",
+    lastInspectionDate: "2026-05-10",
+    nextInspectionDate: "2026-08-10",
+    status: "SCHEDULED",
+    compliancePercent: 92,
+    responsibleEngineer: "Eng. Marcos Vinícius (CREA-PE 048912)",
+    routineChecklist: [
+      "Verificação do sistema hidráulico e mangueiras de elevação",
+      "Teste de freios de estacionamento e serviço",
+      "Inspeção das mangueiras de GLP"
+    ]
+  }
+];
 
 export const aiInsights = [
   {
@@ -17,7 +76,7 @@ export const aiInsights = [
     assetId: "asset-002",
     assetTag: "CHILLER-CARRIER-01",
     customerName: "Condomínio Empresarial Torre Sul",
-    riskScore: 88, // 0-100% (88 = Alta probabilidade de falha)
+    riskScore: 88,
     riskLevel: "CRITICAL",
     predictedFailureDate: "2026-08-25",
     predictedComponent: "Compressor 1 - Rolamento Principal",
@@ -150,12 +209,13 @@ export const assets = [
     serialNumber: "SN-CUM-2024-9912",
     status: "INSTALLED",
     criticality: "CRITICAL",
-    healthIndexScore: 96, // 0-100%
-    mtbfHours: 720, // Mean Time Between Failures
-    mttrHours: 2.5, // Mean Time To Repair
+    healthIndexScore: 96,
+    mtbfHours: 720,
+    mttrHours: 2.5,
     installationDate: "2024-03-10",
     warrantyExpiry: "2027-03-10",
     totalMaintenanceCost: 1450.00,
+    pmocFrequency: "SEMESTRAL",
     attributes: {
       potenciaKva: 500,
       tensaoVolts: 380,
@@ -189,12 +249,13 @@ export const assets = [
     serialNumber: "SN-CAR-882211",
     status: "MAINTENANCE",
     criticality: "HIGH",
-    healthIndexScore: 42, // Alerta
+    healthIndexScore: 42,
     mtbfHours: 340,
     mttrHours: 4.8,
     installationDate: "2023-08-20",
     warrantyExpiry: "2026-08-20",
     totalMaintenanceCost: 2850.00,
+    pmocFrequency: "MENSAL",
     attributes: {
       capacidadeTr: 100,
       refrigerante: "R-134a",
@@ -233,6 +294,7 @@ export const assets = [
     installationDate: "2024-11-05",
     warrantyExpiry: "2026-11-05",
     totalMaintenanceCost: 350.00,
+    pmocFrequency: "TRIMESTRAL",
     attributes: {
       capacidadeCargaKg: 2500,
       combustivel: "GLP",
@@ -263,7 +325,7 @@ export const workOrders = [
     totalCost: 1170.00,
     aiAudit: {
       isAudited: true,
-      confidence: 97.4, // %
+      confidence: 97.4,
       detectedTag: "CHILLER-CARRIER-01",
       photoVerified: true,
       notes: "IA confirmou substituição física da válvula de expansão e ausência de vazamento de fluido."
