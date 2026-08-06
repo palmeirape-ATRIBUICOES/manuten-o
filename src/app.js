@@ -1,7 +1,3 @@
-/* ==========================================================================
-   APP MAIN CONTROLLER - WIZARD + NOVO SERVIÇO (4 ETAPAS GUIADAS)
-   ========================================================================== */
-
 import { CanvasSignaturePad } from './components/canvas-signature.js';
 import { authService } from './services/auth-service.js';
 import { subscriptionService } from './services/subscription-service.js';
@@ -13,6 +9,7 @@ import { renderSubscriptionManagementPage } from './views/subscription-page.js';
 import { NewServiceWizard } from './views/new-service-wizard.js';
 import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
 import { renderDatabaseConfigView, attachDatabaseConfigEvents } from './views/database-config-view.js';
+import { offlineSyncQueue } from './mock-data.js';
 
 class AppController {
   constructor() {
