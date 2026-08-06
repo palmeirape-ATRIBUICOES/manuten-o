@@ -1,15 +1,16 @@
 /* ==========================================================================
-   APP MAIN CONTROLLER - PUBLIC LANDING, AUTH, TRIAL ENGINE & BLOCK NAVIGATION
+   APP MAIN CONTROLLER - CLEAN INITIAL STATE & ISOLATED TENANT DATA
    ========================================================================== */
 
-import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights, pmocPlans, offlineSyncQueue } from './mock-data.js';
 import { CanvasSignaturePad } from './components/canvas-signature.js';
 import { authService } from './services/auth-service.js';
 import { subscriptionService } from './services/subscription-service.js';
 import { billingService } from './services/billing-service.js';
+import { tenantDataService } from './services/tenant-data-service.js';
 import { renderLandingPage } from './views/landing-page.js';
 import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js';
 import { renderSubscriptionManagementPage } from './views/subscription-page.js';
+import { offlineSyncQueue } from './mock-data.js';
 
 class AppController {
   constructor() {
@@ -18,7 +19,7 @@ class AppController {
     this.activeWorkOrder = null;
     this.isOnline = navigator.onLine;
 
-    this.currentViewMode = 'PUBLIC_LANDING'; // 'PUBLIC_LANDING', 'REGISTER', 'LOGIN', 'FORGOT', 'ADMIN_PANEL'
+    this.currentViewMode = 'PUBLIC_LANDING';
 
     this.init();
   }
@@ -30,13 +31,18 @@ class AppController {
     this.setupSignaturePad();
     this.setupForms();
 
-    // Check if user is already logged in
     const user = authService.getCurrentUser();
     if (user) {
       this.currentViewMode = 'ADMIN_PANEL';
     }
 
     this.renderRouterView();
+  }
+
+  getActiveTenantData() {
+    const user = authService.getCurrentUser();
+    const tenantId = user ? user.tenantId : 'tenant-alfa-001';
+    return tenantDataService.getTenantData(tenantId);
   }
 
   renderRouterView() {
@@ -56,8 +62,40 @@ class AppController {
       const tenant = authService.getTenantById(currentUser.tenantId) || { name: currentUser.companyName || "Sua Empresa" };
       const sub = subscriptionService.getTenantSubscription(currentUser.tenantId);
       const trialConfig = subscriptionService.getTrialBannerConfig(sub);
+      const tenantData = this.getActiveTenantData();
 
       companyTitleEl.textContent = tenant.name;
+
+      // Update KPI Row values dynamically for the active tenant
+      const kpiRow = document.getElementById('kpi-summary-row');
+      if (kpiRow) {
+        const totalCost = tenantData.workOrders.reduce((acc, w) => acc + (w.totalCost || 0), 0);
+        kpiRow.innerHTML = `
+          <div class="kpi-card">
+            <div class="kpi-label">FATURAMENTO MÊS</div>
+            <div class="kpi-value" style="color: #10b981;">R$ ${totalCost.toFixed(2)}</div>
+            <div class="kpi-sub">${tenantData.workOrders.length} OSs Registradas</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">ATIVOS MONITORADOS</div>
+            <div class="kpi-value" style="color: #6366f1;">${tenantData.assets.length}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${tenantData.assets.length > 0 ? '100% com QR Code' : 'Nenhum ativo ainda'}</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">EQUIPE EM CAMPO</div>
+            <div class="kpi-value">1</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${currentUser.fullName} (Admin)</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">ASSINATURA SAAS</div>
+            <div class="kpi-value" style="color: ${sub.remainingDays <= 3 ? 'var(--danger)' : '#3b82f6'};">${sub.remainingDays} dias</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${sub.subscriptionStatus === 'trial' ? 'período gratuito' : 'assinatura ativa'}</div>
+          </div>
+        `;
+      }
 
       // Render Trial Top Banner
       if (trialConfig) {
@@ -95,15 +133,6 @@ class AppController {
         this.currentViewMode = 'PUBLIC_LANDING';
         this.renderRouterView();
       });
-
-      // Update KPI days
-      const kpiSubDays = document.getElementById('kpi-sub-days');
-      const kpiSubStatus = document.getElementById('kpi-sub-status');
-      if (kpiSubDays && kpiSubStatus) {
-        kpiSubDays.textContent = `${sub.remainingDays} dias`;
-        kpiSubDays.style.color = sub.remainingDays <= 3 ? 'var(--danger)' : '#3b82f6';
-        kpiSubStatus.textContent = sub.subscriptionStatus === 'trial' ? 'período gratuito' : 'assinatura ativa';
-      }
 
       // If expired, auto-redirect to subscription block
       if (sub.subscriptionStatus === 'expired' || sub.subscriptionStatus === 'blocked') {
@@ -148,7 +177,6 @@ class AppController {
         publicContainer.innerHTML = renderForgotPasswordPage();
         this.attachForgotPasswordEvents();
       } else {
-        // Default PUBLIC_LANDING
         publicContainer.innerHTML = renderLandingPage();
         this.attachLandingPageEvents();
       }
@@ -218,7 +246,7 @@ class AppController {
 
         try {
           authService.registerUser({ fullName, companyName, email, phone, password });
-          alert(`Conta criada com sucesso para ${companyName}! Seu período gratuito de 30 dias foi iniciado.`);
+          alert(`Conta criada com sucesso para ${companyName}! Seu espaço de trabalho está limpo e pronto. Seu período gratuito de 30 dias foi iniciado.`);
           this.currentViewMode = 'ADMIN_PANEL';
           this.navStack = [];
           this.renderRouterView();
@@ -427,10 +455,11 @@ class AppController {
     }
   }
 
-  // Level 0: Home Dashboard (Exact missoes-da-loja module cards & icon boxes)
+  // Level 0: Home Dashboard
   getLevel0Config() {
     const user = authService.getCurrentUser();
     const sub = user ? subscriptionService.getTenantSubscription(user.tenantId) : null;
+    const tenantData = this.getActiveTenantData();
 
     return {
       title: "Painel do Gestor",
@@ -443,7 +472,7 @@ class AppController {
           desc: "Gestão do ciclo de vida & QR Code",
           icon: "box",
           iconBgClass: "icon-box-teal",
-          badge: `${assets.length}`,
+          badge: `${tenantData.assets.length}`,
           onClick: () => this.pushLevel(this.getAssetsLevel1Config())
         },
         {
@@ -452,7 +481,7 @@ class AppController {
           desc: "Preventiva, corretiva & checklists",
           icon: "wrench",
           iconBgClass: "icon-box-purple",
-          badge: `${workOrders.filter(w => w.status !== 'FINISHED').length}`,
+          badge: `${tenantData.workOrders.filter(w => w.status !== 'FINISHED').length}`,
           onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
         },
         {
@@ -470,7 +499,7 @@ class AppController {
           desc: "Planos de manutenção & laudo sanitário",
           icon: "calendar-check",
           iconBgClass: "icon-box-indigo",
-          badge: "96%",
+          badge: tenantData.pmocPlans.length > 0 ? "96%" : "0",
           onClick: () => this.pushLevel(this.getPMOCLevel1Config())
         },
         {
@@ -497,7 +526,7 @@ class AppController {
           desc: "Risco de falhas & auditoria visual",
           icon: "sparkles",
           iconBgClass: "icon-box-pink",
-          badge: `${aiInsights.length}`,
+          badge: `${tenantData.aiInsights.length}`,
           onClick: () => this.pushLevel(this.getAILevel1Config())
         },
         {
@@ -506,14 +535,14 @@ class AppController {
           desc: "Parques de equipamentos por cliente",
           icon: "building-2",
           iconBgClass: "icon-box-orange",
-          badge: `${customers.length}`,
+          badge: `${tenantData.customers.length}`,
           onClick: () => this.pushLevel(this.getCustomersLevel1Config())
         }
       ]
     };
   }
 
-  // Level 1: Subscription Management View (Plano e Assinatura)
+  // Level 1: Subscription Management View
   getSubscriptionManagementLevel1Config() {
     const user = authService.getCurrentUser();
     const tenantId = user ? user.tenantId : "tenant-alfa-001";
@@ -536,105 +565,10 @@ class AppController {
     };
   }
 
-  // Level 1: PWA Sub-menu
-  getPWAOfflineLevel1Config() {
-    return {
-      title: "Módulo PWA & Sincronização Offline",
-      subtitle: "Suporte a execução de serviços em locais sem sinal de celular.",
-      breadcrumbTitle: "PWA Offline",
-      blocks: [
-        {
-          id: "sub-pwa-queue",
-          title: "Fila de Sincronização Pendente",
-          desc: "Registros salvos localmente aguardando reconexão",
-          icon: "refresh-cw",
-          iconBgClass: "icon-box-amber",
-          badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length} Pendente`,
-          onClick: () => this.pushLevel(this.getPWASyncQueueContentView())
-        }
-      ]
-    };
-  }
-
-  getPWASyncQueueContentView() {
-    return {
-      title: "Fila de Sincronização Offline (IndexedDB)",
-      subtitle: "Lista de atendimentos realizados sem internet.",
-      breadcrumbTitle: "Fila de Sincronização",
-      renderContent: () => `
-        <div class="card">
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr><th>Nº OS</th><th>Ativo</th><th>Horário</th><th>Detalhes</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                ${offlineSyncQueue.map(item => `
-                  <tr>
-                    <td><strong>${item.osNumber}</strong></td>
-                    <td><strong>${item.assetTag}</strong></td>
-                    <td>${item.timestamp}</td>
-                    <td>${item.details}</td>
-                    <td><span class="badge badge-success">${item.status}</span></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `
-    };
-  }
-
-  // Level 1: PMOC Sub-menu
-  getPMOCLevel1Config() {
-    return {
-      title: "Módulo PMOC & Manutenção Preventiva",
-      subtitle: "Gestão do Plano de Manutenção, Operação e Controle.",
-      breadcrumbTitle: "PMOC & Preventivas",
-      blocks: [
-        {
-          id: "sub-pmoc-schedule",
-          title: "Cronograma de Preventivas",
-          desc: "Visualizar inspeções periódicas agendadas",
-          icon: "calendar",
-          iconBgClass: "icon-box-indigo",
-          badge: `${pmocPlans.length} Planos`,
-          onClick: () => this.pushLevel(this.getPMOCScheduleContentView())
-        }
-      ]
-    };
-  }
-
-  getPMOCScheduleContentView() {
-    return {
-      title: "Cronograma PMOC",
-      subtitle: "Rotinas preventivas periódicas.",
-      breadcrumbTitle: "Cronograma PMOC",
-      renderContent: () => `
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr><th>Ativo</th><th>Cliente</th><th>Periodicidade</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              ${pmocPlans.map(plan => `
-                <tr>
-                  <td><strong>${plan.assetTag}</strong></td>
-                  <td>${plan.customerName}</td>
-                  <td><span class="badge badge-info">${plan.frequency}</span></td>
-                  <td><span class="badge badge-success">${plan.status}</span></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `
-    };
-  }
-
-  // Level 1: Assets Sub-menu
+  // Level 1: Assets Sub-menu (With Clean Empty State Support)
   getAssetsLevel1Config() {
+    const tenantData = this.getActiveTenantData();
+
     return {
       title: "Módulo de Ativos Patrimoniais",
       subtitle: "Escolha uma ação para gerenciar o parque tecnológico.",
@@ -663,7 +597,7 @@ class AppController {
           desc: "Todos os ativos em grade com prontuário",
           icon: "search",
           iconBgClass: "icon-box-blue",
-          badge: `${assets.length}`,
+          badge: `${tenantData.assets.length}`,
           onClick: () => this.pushLevel(this.getAssetsListContentView())
         }
       ]
@@ -671,31 +605,58 @@ class AppController {
   }
 
   getAssetsListContentView() {
+    const tenantData = this.getActiveTenantData();
+    const assetsList = tenantData.assets;
+
     return {
       title: "Prontuário de Ativos Patrimoniais",
       subtitle: "Clique em um ativo para acessar seu prontuário digital completo.",
       breadcrumbTitle: "Lista de Ativos",
-      renderContent: () => `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-          ${assets.map(a => `
-            <div class="card asset-card-item" style="cursor: pointer;" data-id="${a.id}">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                <div>
-                  <h3 style="font-size: 1.1rem; color: #0f172a;">${a.tagName}</h3>
-                  <div style="font-size: 0.8rem; color: var(--text-muted);">${a.categoryName}</div>
-                </div>
-                <span class="badge badge-success">Instalado</span>
-              </div>
-              <div style="font-size: 0.85rem;"><strong>Cliente:</strong> ${a.customerName}</div>
+      renderContent: () => {
+        if (assetsList.length === 0) {
+          return `
+            <div class="card" style="text-align: center; padding: 48px 24px;">
+              <i data-lucide="box" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
+              <h3 style="margin-bottom: 8px;">Seu Parque de Ativos está Limpo</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px; margin: 0 auto 24px;">
+                Você ainda não possui nenhum equipamento cadastrado em sua empresa. Clique no botão abaixo para adicionar seu primeiro ativo e gerar a etiqueta de QR Code.
+              </p>
+              <button class="btn btn-primary" id="btn-empty-add-asset">
+                <i data-lucide="plus-circle"></i> Cadastrar Primeiro Ativo
+              </button>
             </div>
-          `).join('')}
-        </div>
-      `,
+          `;
+        }
+
+        return `
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+            ${assetsList.map(a => `
+              <div class="card asset-card-item" style="cursor: pointer;" data-id="${a.id}">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                  <div>
+                    <h3 style="font-size: 1.1rem; color: #0f172a;">${a.tagName}</h3>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${a.categoryName}</div>
+                  </div>
+                  <span class="badge badge-success">Instalado</span>
+                </div>
+                <div style="font-size: 0.85rem;"><strong>Cliente:</strong> ${a.customerName}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      },
       onContentLoaded: () => {
+        const btnEmpty = document.getElementById('btn-empty-add-asset');
+        if (btnEmpty) {
+          btnEmpty.addEventListener('click', () => {
+            document.getElementById('modal-add-asset').classList.add('active');
+          });
+        }
+
         document.querySelectorAll('.asset-card-item').forEach(card => {
           card.addEventListener('click', () => {
             const id = card.getAttribute('data-id');
-            const asset = assets.find(a => a.id === id);
+            const asset = assetsList.find(a => a.id === id);
             if (asset) this.openAssetDetailModal(asset);
           });
         });
@@ -705,6 +666,8 @@ class AppController {
 
   // Level 1: Work Orders Sub-menu
   getWorkOrdersLevel1Config() {
+    const tenantData = this.getActiveTenantData();
+
     return {
       title: "Módulo de Ordens de Serviço",
       subtitle: "Gerencie chamados de campo, preventivas e checklists.",
@@ -716,7 +679,7 @@ class AppController {
           desc: "Atendimentos sendo executados",
           icon: "clock",
           iconBgClass: "icon-box-amber",
-          badge: `${workOrders.filter(w => w.status !== 'FINISHED').length}`,
+          badge: `${tenantData.workOrders.filter(w => w.status !== 'FINISHED').length}`,
           onClick: () => this.pushLevel(this.getWorkOrdersContentView('IN_PROGRESS'))
         }
       ]
@@ -724,40 +687,56 @@ class AppController {
   }
 
   getWorkOrdersContentView(statusFilter) {
-    const filtered = statusFilter ? workOrders.filter(w => w.status === statusFilter) : workOrders;
+    const tenantData = this.getActiveTenantData();
+    const filtered = statusFilter ? tenantData.workOrders.filter(w => w.status === statusFilter) : tenantData.workOrders;
+
     return {
       title: "Ordens de Serviço",
       subtitle: "Lista de chamados técnicos e manutenções.",
       breadcrumbTitle: "Lista de OS",
-      renderContent: () => `
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr><th>Nº OS</th><th>Ativo</th><th>Cliente</th><th>Status</th><th>Ações</th></tr>
-            </thead>
-            <tbody>
-              ${filtered.map(wo => `
-                <tr>
-                  <td><strong>${wo.osNumber}</strong></td>
-                  <td>${wo.assetTag}</td>
-                  <td>${wo.customerName}</td>
-                  <td><span class="badge badge-info">${wo.status}</span></td>
-                  <td>
-                    <button class="btn btn-secondary btn-open-os" data-id="${wo.id}">
-                      <i data-lucide="play"></i> Executar OS
-                    </button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `,
+      renderContent: () => {
+        if (filtered.length === 0) {
+          return `
+            <div class="card" style="text-align: center; padding: 48px 24px;">
+              <i data-lucide="wrench" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
+              <h3 style="margin-bottom: 8px;">Nenhuma Ordem de Serviço Encontrada</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px; margin: 0 auto 24px;">
+                Não existem chamados ou ordens de serviço pendentes no momento para o seu espaço de trabalho.
+              </p>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Nº OS</th><th>Ativo</th><th>Cliente</th><th>Status</th><th>Ações</th></tr>
+              </thead>
+              <tbody>
+                ${filtered.map(wo => `
+                  <tr>
+                    <td><strong>${wo.osNumber}</strong></td>
+                    <td>${wo.assetTag}</td>
+                    <td>${wo.customerName}</td>
+                    <td><span class="badge badge-info">${wo.status}</span></td>
+                    <td>
+                      <button class="btn btn-secondary btn-open-os" data-id="${wo.id}">
+                        <i data-lucide="play"></i> Executar OS
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      },
       onContentLoaded: () => {
         document.querySelectorAll('.btn-open-os').forEach(btn => {
           btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-id');
-            const wo = workOrders.find(w => w.id === id);
+            const wo = filtered.find(w => w.id === id);
             if (wo) this.openWorkOrderExecModal(wo);
           });
         });
@@ -765,7 +744,117 @@ class AppController {
     };
   }
 
+  // Level 1: PMOC Sub-menu
+  getPMOCLevel1Config() {
+    const tenantData = this.getActiveTenantData();
+
+    return {
+      title: "Módulo PMOC & Manutenção Preventiva",
+      subtitle: "Gestão do Plano de Manutenção, Operação e Controle.",
+      breadcrumbTitle: "PMOC & Preventivas",
+      blocks: [
+        {
+          id: "sub-pmoc-schedule",
+          title: "Cronograma de Preventivas",
+          desc: "Visualizar inspeções periódicas agendadas",
+          icon: "calendar",
+          iconBgClass: "icon-box-indigo",
+          badge: `${tenantData.pmocPlans.length} Planos`,
+          onClick: () => this.pushLevel(this.getPMOCScheduleContentView())
+        }
+      ]
+    };
+  }
+
+  getPMOCScheduleContentView() {
+    const tenantData = this.getActiveTenantData();
+
+    return {
+      title: "Cronograma PMOC",
+      subtitle: "Rotinas preventivas periódicas.",
+      breadcrumbTitle: "Cronograma PMOC",
+      renderContent: () => {
+        if (tenantData.pmocPlans.length === 0) {
+          return `
+            <div class="card" style="text-align: center; padding: 48px 24px;">
+              <i data-lucide="calendar-check" style="font-size: 3.5rem; color: var(--text-muted); margin-bottom: 16px;"></i>
+              <h3 style="margin-bottom: 8px;">Nenhum Plano PMOC Configurado</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 500px; margin: 0 auto 24px;">
+                Cadastre seus ativos para configurar a periodicidade e a rotina preventiva de manutenção.
+              </p>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Ativo</th><th>Cliente</th><th>Periodicidade</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                ${tenantData.pmocPlans.map(plan => `
+                  <tr>
+                    <td><strong>${plan.assetTag}</strong></td>
+                    <td>${plan.customerName}</td>
+                    <td><span class="badge badge-info">${plan.frequency}</span></td>
+                    <td><span class="badge badge-success">${plan.status}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+    };
+  }
+
+  // Level 1: Other Sub-menus
+  getPWAOfflineLevel1Config() {
+    return {
+      title: "Módulo PWA & Sincronização Offline",
+      subtitle: "Suporte a execução de serviços em locais sem sinal de celular.",
+      breadcrumbTitle: "PWA Offline",
+      blocks: [
+        {
+          id: "sub-pwa-queue",
+          title: "Fila de Sincronização Pendente",
+          desc: "Registros salvos localmente aguardando reconexão",
+          icon: "refresh-cw",
+          iconBgClass: "icon-box-amber",
+          badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length} Pendente`,
+          onClick: () => this.pushLevel({
+            title: "Fila de Sincronização",
+            breadcrumbTitle: "Fila PWA",
+            renderContent: () => `<div class="card">Nenhum atendimento pendente de transmissão.</div>`
+          })
+        }
+      ]
+    };
+  }
+
+  getAILevel1Config() {
+    const tenantData = this.getActiveTenantData();
+    return {
+      title: "Módulo IA & Predição",
+      subtitle: "Inteligência artificial operacional.",
+      breadcrumbTitle: "IA Operacional",
+      blocks: [
+        {
+          id: "sub-ai-insights",
+          title: "Matriz Preditiva IA",
+          desc: "Alertas de risco",
+          icon: "sparkles",
+          iconBgClass: "icon-box-pink",
+          badge: `${tenantData.aiInsights.length}`,
+          onClick: () => alert("Visualizando matriz preditiva.")
+        }
+      ]
+    };
+  }
+
   getFinancialLevel1Config() {
+    const tenantData = this.getActiveTenantData();
     return {
       title: "Módulo Financeiro & Peças",
       subtitle: "Estoque de peças e faturamento.",
@@ -777,27 +866,8 @@ class AppController {
           desc: "Catálogo de peças & almoxarifado",
           icon: "package",
           iconBgClass: "icon-box-blue",
-          badge: `${partsInventory.length}`,
+          badge: `${tenantData.partsInventory.length}`,
           onClick: () => alert("Visualizando catálogo de peças.")
-        }
-      ]
-    };
-  }
-
-  getAILevel1Config() {
-    return {
-      title: "Módulo IA & Predição",
-      subtitle: "Inteligência artificial operacioanl.",
-      breadcrumbTitle: "IA Operacional",
-      blocks: [
-        {
-          id: "sub-ai-insights",
-          title: "Matriz Preditiva IA",
-          desc: "Alertas de risco",
-          icon: "sparkles",
-          iconBgClass: "icon-box-pink",
-          badge: `${aiInsights.length}`,
-          onClick: () => alert("Visualizando matriz preditiva.")
         }
       ]
     };
@@ -821,7 +891,7 @@ class AppController {
     };
   }
 
-  // Modals Setup
+  // Modals Setup & Data Handlers
   setupGlobalEvents() {
     const btnHome = document.getElementById('btn-go-home');
     if (btnHome) btnHome.addEventListener('click', () => this.resetToHome());
@@ -889,24 +959,27 @@ class AppController {
         const model = document.getElementById('new-asset-model').value;
         const serial = document.getElementById('new-asset-serial').value;
 
-        assets.unshift({
+        const newAsset = {
           id: `asset-${Date.now()}`,
           tagName: tag,
           qrCodeHash: `QR-${tag}-ALFA`,
           categoryId: categoryId,
           categoryName: 'Equipamento Geral',
           customerId: customerId,
-          customerName: 'Cliente Cadastrado',
+          customerName: customerId === 'cust-001' ? 'Hospital Central São Lucas' : 'Condomínio Torre Sul',
           locationName: 'Local Principal',
           model: model,
           serialNumber: serial,
           status: 'INSTALLED',
           history: [{ date: new Date().toISOString().split('T')[0], type: 'INSTALLATION', text: 'Ativo cadastrado.' }]
-        });
+        };
+
+        // Save to active tenant's isolated data
+        tenantDataService.addAsset(user.tenantId, newAsset);
 
         document.getElementById('modal-add-asset').classList.remove('active');
         formAsset.reset();
-        this.renderCurrentLevel();
+        this.renderRouterView();
         alert(`Ativo ${tag} cadastrado com sucesso!`);
       });
     }
