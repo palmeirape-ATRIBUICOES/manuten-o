@@ -8,12 +8,12 @@
 ## 📋 Sumário
 1. [Visão Geral e Filosofia Central](#1-visão-geral-e-filosofia-central)
 2. [O Problema Que Resolvemos](#2-o-problema-que-resolvemos)
-3. [Posicionamento de Mercado e Diferenciais](#3-posicionamento-de-mercado-e-diferenciais)
-4. [Personas e Jornadas do Usuário](#4-personas-e-jornadas-do-usuário)
-5. [O Ciclo de Vida Universal do Ativo (Asset Lifecycle)](#5-o-ciclo-de-vida-universal-do-ativo-asset-lifecycle)
-6. [Modelo de Monetização e Regras de Negócio](#6-modelo-de-monetização-e-regras-de-negócio)
-7. [Matriz de Casos de Uso Principais](#7-matriz-de-casos-de-uso-principais)
-8. [Os 7 Princípios Imutáveis do Sistema](#8-os-7-princípios-imutáveis-do-sistema)
+3. [Arquitetura Visual e Padrão de Navegação por Blocos](#3-arquitetura-visual-e-padrão-de-navegação-por-blocos)
+4. [Posicionamento de Mercado e Diferenciais](#4-posicionamento-de-mercado-e-diferenciais)
+5. [Personas e Jornadas do Usuário](#5-personas-e-jornadas-do-usuário)
+6. [O Ciclo de Vida Universal do Ativo (Asset Lifecycle)](#6-o-ciclo-de-vida-universal-do-ativo-asset-lifecycle)
+7. [Modelo de Monetização e Regras de Negócio](#7-modelo-de-monetização-e-regras-de-negócio)
+8. [Os Princípios Imutáveis do Sistema](#8-os-princípios-imutáveis-do-sistema)
 
 ---
 
@@ -25,9 +25,6 @@ Sistemas tradicionais de Ordem de Serviço tratam a manutenção como eventos de
 
 Seja um ar-condicionado central, uma empilhadeira, um gerador elétrico, um trator, um gerador fotovoltaico ou um tomógrafo hospitalar, cada ativo possui uma **identidade digital única (QR Code)**, uma **história**, um **custo de manutenção** e um **ciclo de vida** que deve ser rastreado do nascimento à aposentadoria.
 
-### Visão de Longo Prazo
-Ser a plataforma SaaS padrão global para prestadores de serviços de manutenção técnica, transformando a gestão patrimonial física em uma experiência digital inteligente, transparente e altamente rentável.
-
 ---
 
 ## 2. O Problema Que Resolvemos
@@ -38,108 +35,78 @@ Ser a plataforma SaaS padrão global para prestadores de serviços de manutenç�
 3. **Equipes de Campo Ineficientes**: Técnicos perdem tempo procurando manuais, modelos de peças ou localizando equipamentos dentro de grandes plantas industriais/prediais.
 4. **Faturamento Atrasado**: Ordens de serviço em papel demoram dias para chegar ao escritório e virar fatura.
 
-### 🔴 As Dores do Cliente Final (Dono do Ativo)
-1. **Opacidade Total**: O cliente paga contratos mensais de manutenção, mas não sabe o real estado de saúde dos seus equipamentos.
-2. **Paradas Não Programadas (Downtime)**: Equipamentos quebram repentinamente por falta de manutenção preventiva sistemática.
-3. **Incapaz de Auditar a Garantia**: Desconhece quais componentes ainda estão cobertos pela garantia do fabricante ou do prestador.
-
 ---
 
-## 3. Posicionamento de Mercado e Diferenciais
+## 3. Arquitetura Visual e Padrão de Navegação por Blocos
+
+O sistema adota estritamente o **Padrão de Navegação por Blocos em Níveis (Block-Based Navigation Architecture)**, inspirado no projeto de referência `missoes-da-loja`.
 
 ```mermaid
-quadrantChart
-    title Posicionamento de Mercado
-    x-axis Baixa Rastreabilidade --> Alta Rastreabilidade por QR Code
-    y-axis Foco em Folha de OS --> Foco em Asset Management
-    "Planilhas & Papel": [0.15, 0.15]
-    "Sistemas Legacy de OS": [0.35, 0.45]
-    "ERP Corporativo Rígido": [0.75, 0.35]
-    "SaaS Asset Management": [0.90, 0.90]
+graph TD
+    Level0[Home: Painel de Módulos Operacionais] --> BlockA[📦 Ativos Patrimoniais]
+    Level0 --> BlockB[🛠️ Ordens de Serviço]
+    Level0 --> BlockC[📷 Leitor QR Code]
+    Level0 --> BlockD[💰 Financeiro & Peças]
+    Level0 --> BlockE[🤖 IA & Predição]
+    Level0 --> BlockF[🏢 Clientes & Locais]
+    Level0 --> BlockG[⚙️ Configurações]
+
+    BlockA --> SubLevel1[Nível 1: Módulo de Ativos]
+    SubLevel1 --> SubBlock1[➕ Cadastrar Novo Ativo]
+    SubLevel1 --> SubBlock2[🔍 Buscar & Listar Ativos]
+    SubLevel1 --> SubBlock3[⚡ Ativos em Manutenção]
+    SubLevel1 --> SubBlock4[🏷️ Etiquetas de QR Code]
 ```
 
-### Por que venceremos a concorrência?
-- **Foco Absoluto no Ativo**: Construído em volta da saúde do ativo patrimonial, e não de papéis de OS.
-- **QR Code Nativo & Offline-First**: O técnico escaneia a etiqueta no equipamento e abre o prontuário completo instantaneamente, mesmo em subsolos ou sem internet.
-- **Transparência como Serviço**: Oferecemos um portal exclusivo onde o cliente final acompanha a saúde dos seus ativos em tempo real, gerando retenção de contratos para o prestador.
+### Diretrizes de Navegação e UX:
+- **Sem Sidebars / Sem Menus Hambúrguer**: Toda navegação ocorre exclusivamente por meio de blocos (cards) grandes e visíveis.
+- **Navegação em Níveis**: Cada clique avança um nível na pilha de navegação (`Level Navigation Stack`).
+- **Botão Voltar Permanente**: O usuário sempre visualiza o botão `← Voltar ao Nível Anterior` e o rastro de navegação (`Breadcrumbs`).
+- **Regra dos 8 Blocos**: Nenhuma tela exibirá mais do que **8 blocos principais**. Se um módulo crescer além desse limite, deverá ser subdividido em sub-níveis.
+- **Garantia de 3 Clicks**: Qualquer funcionalidade ou informação do sistema deve ser acessível em no máximo **3 cliques** a partir da tela inicial.
 
 ---
 
-## 4. Personas e Jornadas do Usuário
+## 4. Posicionamento de Mercado e Diferenciais
+
+- **Foco Absoluto no Ativo**: Construído em volta da saúde do ativo patrimonial, e não de papéis de OS.
+- **QR Code Nativo & Offline-First**: O técnico escaneia a etiqueta no equipamento e abre o prontuário completo instantaneamente, mesmo em subsolos ou sem internet.
+- **Navegação Limpa por Blocos**: Interface sem poluição visual onde o técnico e o gestor nunca enxergam dezenas de botões irrelevantes ao mesmo tempo.
+
+---
+
+## 5. Personas e Jornadas do Usuário
 
 ### Persona 1: Carlos, O Dono do Prestador de Serviço
 - **Perfil**: Empresário de empresa de manutenção com 15 técnicos em campo.
 - **Objetivo**: Aumentar a margem de lucro, reduzir reclamações de clientes e controlar o trabalho da equipe.
-- **Jornada**: Acessa o Dashboard Admin pela manhã, visualiza o mapa de OSs em andamento, analisa os índices de SLA e foca na expansão dos contratos.
+- **Jornada**: Clica no bloco `Financeiro & Peças` -> seleciona `Faturamento por Cliente` para visualizar o resumo de cobrança mensal.
 
 ### Persona 2: Roberto, O Técnico de Campo
 - **Perfil**: Profissional operacional que realiza de 6 a 10 atendimentos por dia.
 - **Objetivo**: Resolver o problema rapidamente sem burocracia ou papelada.
-- **Jornada**: Chega ao cliente, aproxima o smartphone do QR Code colado no ativo, visualiza o histórico do equipamento, executa o checklist visual, tira fotos de evidência (Antes/Depois), colhe a assinatura no celular e parte para a próxima chamada.
-
-### Persona 3: Amanda, A Gestora do Cliente Final (Síndica / Gerente Predial)
-- **Perfil**: Responsável por manter os ativos do condomínio ou indústria operantes.
-- **Objetivo**: Ter relatórios claros e certeza de que as manutenções contratadas foram realmente executadas.
-- **Jornada**: Recebe um link por e-mail/WhatsApp assim que o técnico conclui a OS, abre o laudo em PDF com fotos e histórico do ativo, e aprova a execução.
+- **Jornada**: Clica no bloco `Leitor QR Code`, escaneia a etiqueta do equipamento, seleciona a ação `Executar OS`, realiza o checklist com foto e colhe a assinatura no celular.
 
 ---
 
-## 5. O Ciclo de Vida Universal do Ativo (Asset Lifecycle)
+## 6. O Ciclo de Vida Universal do Ativo (Asset Lifecycle)
 
 Todo ativo cadastrado no sistema obrigatoriamente percorre as seguintes fases:
-
-```mermaid
-graph TD
-    Phase1[1. Cadastro & QR Code] --> Phase2[2. Instalação no Cliente]
-    Phase2 --> Phase3[3. Operação & Preventivas PMOC]
-    Phase3 --> Phase4[4. Intervenções Corretivas & Peças]
-    Phase4 --> Phase5[5. Gestão de Garantia de Componentes]
-    Phase5 --> Phase3
-    Phase3 --> Phase6[6. Obsolescência / Descomissionamento]
-    Phase6 --> Phase7[7. Arquivamento Histórico Imutável]
-```
-
-### Mapeamento dos Ativos Suportados:
-A arquitetura foi projetada para suportar qualquer patrimônio físico:
-- **HVAC**: Chillers, Splitters, Torres de Resfriamento, Fancoils (Norma PMOC).
-- **Energia**: Geradores Diesel, No-breaks, Transformadores, Painéis Solares.
-- **Frota & Logística**: Empilhadeiras, Guindastes, Caminhões, Veículos Utilitários.
-- **Industrial**: Bombas Hidráulicas, Motores Elétricos, Compressores, Prensas.
-- **Hospitalar**: Tomógrafos, Monitores Cardíacos, Autoclaves, Raio-X.
-- **Infraestrutura**: Elevadores, Portões Automáticos, Sistemas de Alarme e Incêndio.
+1. Cadastro & QR Code -> 2. Instalação no Cliente -> 3. Operação & Preventivas PMOC -> 4. Intervenções Corretivas & Peças -> 5. Gestão de Garantia de Componentes -> 6. Obsolescência / Descomissionamento -> 7. Arquivamento Histórico Imutável.
 
 ---
 
-## 6. Modelo de Monetização e Regras de Negócio
+## 7. Modelo de Monetização e Regras de Negócio
 
-O SaaS adota o modelo de receita recorrente **B2B Subscription (SaaS)** baseado em camadas:
-
-1. **Plano Starter**: Até 200 Ativos Cadastrados + 3 Técnicos.
-2. **Plano Professional**: Até 1.500 Ativos + 10 Técnicos + Módulo de Preventivas Automáticas + QR Codes ilimitados.
-3. **Plano Enterprise**: Ativos Ilimitados + Técnicos Ilimitados + API Pública + RLS Dedicado + Portal do Cliente Customizado com Marca Própria (White-label).
+O SaaS adota o modelo de receita recorrente **B2B Subscription (SaaS)** em 3 planos: Starter, Professional e Enterprise.
 
 ---
 
-## 7. Matriz de Casos de Uso Principais
+## 8. Os Princípios Imutáveis do Sistema
 
-| ID | Caso de Uso | Ator Principal | Descrição Sintética |
-|---|---|---|---|
-| **UC01** | Cadastrar Ativo & Gerar QR | Gestor / Técnico | Registra o equipamento, define a categoria, atributos e imprime o QR Code. |
-| **UC02** | Ler QR Code em Campo | Técnico de Campo | Escaneia a etiqueta física e carrega o prontuário e histórico de OS daquele ativo. |
-| **UC03** | Executar OS com Checklist | Técnico de Campo | Preenche checklist obrigatório, anexa foto inicial e final e colhe assinatura. |
-| **UC04** | Programar Preventivas | Gestor Técnico | Configura frequência de inspeção e o sistema gera as OSs automaticamente. |
-| **UC05** | Consultar Prontuário | Cliente Final | Acessa a página pública/privada do ativo e lê todos os laudos técnicos passados. |
-
----
-
-## 8. Os 7 Princípios Imutáveis do Sistema
-
-Estes princípios **NUNCA DEVEM SER VIOLADOS** em nenhuma atualização ou nova funcionalidade:
-
-1. **O Ativo é o Centro de Tudo**: Nenhuma Ordem de Serviço pode existir "flutuando" no sistema sem estar vinculada a um Ativo ou Localização cadastrada.
-2. **O QR Code é a Ponte Física-Digital**: Todo ativo físico deve possuir uma identidade digital escaneável por QR Code.
-3. **Comprovação com Evidência Visual**: Toda OS concluída exige fotos reais (antes/depois) e validação digital.
-4. **Isolamento Multitenant Absoluto**: Os dados de um prestador ou de seus clientes jamais podem vazar para outro tenant.
-5. **Histórico Imutável**: O prontuário de um ativo é um documento auditável. Registros passados de manutenção nunca podem ser apagados ou adulterados.
-6. **Simplicidade Extrema para o Técnico**: A interface de campo deve exigir o mínimo de toques possível, funcionando em dispositivos de baixo custo e com internet instável.
-7. **Transparência Gera Retenção**: A plataforma deve sempre facilitar a entrega de relatórios claros e impecáveis para o cliente final.
+1. **O Ativo é o Centro de Tudo**: Nenhuma Ordem de Serviço pode existir sem estar vinculada a um Ativo ou Localização.
+2. **Navegação Exclusiva por Blocos**: É proibida a inclusão de menus laterais (sidebars) ou menus hambúrguer. A navegação deve ser sempre baseada em blocos e níveis com botão "Voltar".
+3. **Regra dos 8 Blocos e 3 Clicks**: Nenhuma tela pode conter mais de 8 botões/cards principais. Qualquer função deve ser alcançada em no máximo 3 cliques.
+4. **Comprovação com Evidência Visual & IA**: Toda OS concluída exige fotos auditadas por visão computacional.
+5. **Isolamento Multitenant Absoluto**: Isolamento estrito de dados por `tenant_id` com PostgreSQL RLS.
+6. **Histórico Imutável**: Prontuários e trocas de peças passadas nunca podem ser apagados ou alterados.

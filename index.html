@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SaaS Asset Management - Gestão de Ativos, Peças & IA Preditiva</title>
+  <title>SaaS Asset Management - Plataforma Modular por Blocos</title>
   
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="src/assets/styles/main.css">
@@ -12,499 +12,62 @@
 <body>
 
   <div id="app">
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
+    <!-- Topbar Header (Clean Layout - No Sidebar, No Hamburger) -->
+    <header class="topbar">
+      <div class="brand-container" id="btn-go-home" title="Ir para a Tela Inicial">
         <div class="brand-icon">
           <i data-lucide="shield-check"></i>
         </div>
         <div class="brand-title">AssetSaaS</div>
       </div>
 
-      <nav class="sidebar-nav">
-        <div class="nav-item active" data-view="dashboard">
-          <i data-lucide="layout-dashboard"></i>
-          <span>Dashboard</span>
-        </div>
-        <div class="nav-item" data-view="assets">
-          <i data-lucide="box"></i>
-          <span>Ativos Patrimoniais</span>
-        </div>
-        <div class="nav-item" data-view="qr-scanner">
-          <i data-lucide="qr-code"></i>
-          <span>Leitor QR Code</span>
-        </div>
-        <div class="nav-item" data-view="work-orders">
-          <i data-lucide="wrench"></i>
-          <span>Ordens de Serviço</span>
-        </div>
-        <div class="nav-item" data-view="financial">
-          <i data-lucide="dollar-sign"></i>
-          <span>Financeiro & Peças</span>
-        </div>
-        <div class="nav-item" data-view="ai-insights">
-          <i data-lucide="sparkles"></i>
-          <span>IA & Predição</span>
-        </div>
-        <div class="nav-item" data-view="customers">
-          <i data-lucide="building-2"></i>
-          <span>Clientes & Locais</span>
-        </div>
-        <div class="nav-item" data-view="settings">
-          <i data-lucide="settings"></i>
-          <span>Configurações</span>
-        </div>
-      </nav>
-    </aside>
-
-    <!-- Main Application Shell -->
-    <main class="main-content">
-      <!-- Topbar Header -->
-      <header class="topbar">
-        <div class="topbar-search">
-          <i data-lucide="search" style="color: var(--text-muted);"></i>
-          <input type="text" id="global-search" placeholder="Buscar por Tag, QR Code, Série ou Peça...">
+      <div class="topbar-right">
+        <div class="tenant-pill" id="tenant-display">
+          <i data-lucide="building"></i>
+          <span>Alfa Climatização</span>
         </div>
 
-        <div class="topbar-actions">
-          <div class="tenant-pill" id="tenant-display">
-            <i data-lucide="building"></i>
-            <span>Alfa Climatização</span>
-          </div>
-
-          <button class="btn btn-secondary btn-icon" id="btn-notifications" title="Notificações">
-            <i data-lucide="bell"></i>
-          </button>
-
-          <div class="user-profile">
-            <div class="avatar">CE</div>
-            <div style="font-size: 0.85rem;">
-              <div style="font-weight: 600;">Carlos Eduardo</div>
-              <div style="color: var(--text-muted); font-size: 0.75rem;">Técnico de Campo</div>
-            </div>
+        <div class="user-profile">
+          <div class="avatar">CE</div>
+          <div style="font-size: 0.85rem;">
+            <div style="font-weight: 600;">Carlos Eduardo</div>
+            <div style="color: var(--text-muted); font-size: 0.75rem;">Técnico de Campo</div>
           </div>
         </div>
-      </header>
-
-      <!-- Page Views Container -->
-      <div class="page-container">
-        
-        <!-- 1. DASHBOARD VIEW -->
-        <section id="view-dashboard" class="app-view">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <div>
-              <h2>Visão Geral da Operação</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Prontuário operacional e saúde dos ativos em tempo real.</p>
-            </div>
-            <button class="btn btn-primary" id="btn-quick-os">
-              <i data-lucide="plus"></i>
-              Nova Ordem de Serviço
-            </button>
-          </div>
-
-          <!-- KPI Cards -->
-          <div class="grid-stats">
-            <div class="card">
-              <div class="stat-header">
-                <span>Total de Ativos</span>
-                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
-                  <i data-lucide="box"></i>
-                </div>
-              </div>
-              <div class="stat-value" id="kpi-total-assets">142</div>
-              <div class="stat-sub">100% monitorados com QR Code</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>OSs em Andamento</span>
-                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
-                  <i data-lucide="wrench"></i>
-                </div>
-              </div>
-              <div class="stat-value" id="kpi-active-os">5</div>
-              <div class="stat-sub">2 Técnicos alocados em campo</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>Ativos em Alerta / Manutenção</span>
-                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
-                  <i data-lucide="alert-triangle"></i>
-                </div>
-              </div>
-              <div class="stat-value" id="kpi-alert-assets">3</div>
-              <div class="stat-sub">1 Falha de alta criticidade</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>Preventivas PMOC (Mês)</span>
-                <div class="stat-icon" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">
-                  <i data-lucide="check-circle-2"></i>
-                </div>
-              </div>
-              <div class="stat-value" id="kpi-preventives">94%</div>
-              <div class="stat-sub">Conformidade com norma técnica</div>
-            </div>
-          </div>
-
-          <!-- Dashboard Charts & Recent Activity -->
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
-            <div class="card">
-              <h3 style="margin-bottom: 16px;">Ordens de Serviço Recentes</h3>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Código OS</th>
-                      <th>Ativo Patrimonial</th>
-                      <th>Cliente</th>
-                      <th>Tipo</th>
-                      <th>Status</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="table-dashboard-os">
-                    <!-- Dynamic rendering -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="card">
-              <h3 style="margin-bottom: 16px;">Categorias de Ativos</h3>
-              <div id="category-distribution-list" style="display: flex; flex-direction: column; gap: 14px;">
-                <!-- Rendered dynamically -->
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 2. ASSETS VIEW -->
-        <section id="view-assets" class="app-view" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <div>
-              <h2>Gestão de Ativos Físicos (Asset Management)</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Prontuário técnico, QR Codes, garantias e ciclo de vida.</p>
-            </div>
-            <button class="btn btn-primary" id="btn-add-asset">
-              <i data-lucide="plus-circle"></i>
-              Cadastrar Novo Ativo
-            </button>
-          </div>
-
-          <!-- Filter Toolbar -->
-          <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-            <select class="form-control" id="filter-asset-category" style="width: 220px;">
-              <option value="">Todas as Categorias</option>
-              <option value="cat-gen">Geradores & Energia</option>
-              <option value="cat-hvac">HVAC & Climatização</option>
-              <option value="cat-fleet">Empilhadeiras & Frota</option>
-            </select>
-
-            <select class="form-control" id="filter-asset-status" style="width: 200px;">
-              <option value="">Todos os Status</option>
-              <option value="INSTALLED">Instalado / Operacional</option>
-              <option value="MAINTENANCE">Em Manutenção</option>
-              <option value="DECOMMISSIONED">Desativado</option>
-            </select>
-          </div>
-
-          <!-- Assets Cards Grid -->
-          <div id="assets-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-            <!-- Rendered dynamically -->
-          </div>
-        </section>
-
-        <!-- 3. QR SCANNER VIEW -->
-        <section id="view-qr-scanner" class="app-view" style="display: none;">
-          <div style="max-width: 600px; margin: 0 auto; text-align: center;">
-            <h2 style="margin-bottom: 8px;">Leitor de QR Code em Campo</h2>
-            <p style="color: var(--text-muted); margin-bottom: 24px;">Aproxime a câmera da etiqueta afixada no equipamento para abrir seu prontuário instantaneamente.</p>
-
-            <div class="card" style="padding: 36px; border: 2px dashed var(--primary);">
-              <div id="scanner-viewfinder" style="width: 100%; height: 260px; background-color: #0b1120; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative;">
-                <i data-lucide="qr-code" style="font-size: 4rem; color: var(--primary);"></i>
-                <div style="font-size: 0.9rem; color: var(--text-muted);">Câmera ativa. Aguardando enquadramento...</div>
-                
-                <div style="position: absolute; width: 80%; height: 2px; background: var(--primary); box-shadow: 0 0 12px var(--primary); animation: scanAnimation 2s infinite linear;"></div>
-              </div>
-
-              <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
-                <div style="font-size: 0.85rem; color: var(--text-muted);">Ou selecione um QR Code de teste rápido:</div>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                  <button class="btn btn-secondary btn-quick-scan" data-hash="QR-GER-ALFA-9081">GER-500KVA-01</button>
-                  <button class="btn btn-secondary btn-quick-scan" data-hash="QR-CHIL-ALFA-4412">CHILLER-CARRIER-01</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 4. WORK ORDERS VIEW -->
-        <section id="view-work-orders" class="app-view" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <div>
-              <h2>Ordens de Serviço (OS & Checklists)</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Controle de manutenções preventivas, corretivas e comprovação visual.</p>
-            </div>
-          </div>
-
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nº OS</th>
-                  <th>Ativo / Equipamento</th>
-                  <th>Cliente & Local</th>
-                  <th>Prioridade / SLA</th>
-                  <th>Status</th>
-                  <th>Auditoria IA</th>
-                  <th>Custo Total</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="table-full-os">
-                <!-- Rendered dynamically -->
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- 5. FINANCIAL & PARTS INVENTORY VIEW -->
-        <section id="view-financial" class="app-view" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <div>
-              <h2>Gestão Financeira & Estoque de Peças</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Faturamento de OS, controle de estoque em vans, custos por ativo e garantias.</p>
-            </div>
-            <button class="btn btn-primary" id="btn-add-part">
-              <i data-lucide="package-plus"></i>
-              Cadastrar Nova Peça
-            </button>
-          </div>
-
-          <!-- Financial KPIs -->
-          <div class="grid-stats">
-            <div class="card">
-              <div class="stat-header">
-                <span>Faturamento Estimado (Mês)</span>
-                <div class="stat-icon" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">
-                  <i data-lucide="dollar-sign"></i>
-                </div>
-              </div>
-              <div class="stat-value" id="kpi-monthly-revenue">R$ 10.140,00</div>
-              <div class="stat-sub">Contratos + Mão de Obra + Peças</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>Valor Total de Peças em Estoque</span>
-                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
-                  <i data-lucide="package"></i>
-                </div>
-              </div>
-              <div class="stat-value" id="kpi-inventory-value">R$ 15.680,00</div>
-              <div class="stat-sub">222 itens em almoxarifado & vans</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>Peças Substituídas sob Garantia</span>
-                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
-                  <i data-lucide="shield-check"></i>
-                </div>
-              </div>
-              <div class="stat-value" id="kpi-warranty-claims">2</div>
-              <div class="stat-sub">R$ 1.230,00 economizados para clientes</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>Taxa Média Mão de Obra</span>
-                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
-                  <i data-lucide="clock"></i>
-                </div>
-              </div>
-              <div class="stat-value">R$ 120,00/h</div>
-              <div class="stat-sub">Valor de tabela por hora de técnico</div>
-            </div>
-          </div>
-
-          <!-- Inventory & Billing Tables -->
-          <div style="display: flex; flex-direction: column; gap: 24px;">
-            <div class="card">
-              <h3 style="margin-bottom: 16px;">Catálogo & Estoque de Peças de Reposição</h3>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>SKU</th>
-                      <th>Nome da Peça / Componente</th>
-                      <th>Categoria</th>
-                      <th>Preço Unit.</th>
-                      <th>Em Estoque</th>
-                      <th>Localização</th>
-                      <th>Garantia</th>
-                    </tr>
-                  </thead>
-                  <tbody id="table-parts-inventory">
-                    <!-- Rendered dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="card">
-              <h3 style="margin-bottom: 16px;">Resumo de Faturamento por Cliente (Mês Atual)</h3>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Valor Contrato Fixo</th>
-                      <th>Custo Mão de Obra (OSs)</th>
-                      <th>Custo Peças Aplicadas</th>
-                      <th>Total a Faturar</th>
-                    </tr>
-                  </thead>
-                  <tbody id="table-client-billing">
-                    <!-- Rendered dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 6. AI INSIGHTS & PREDICTIVE HEALTH VIEW (SPRINT 3) -->
-        <section id="view-ai-insights" class="app-view" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <div>
-              <h2>Inteligência Artificial Operacional & Predição de Falhas</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">Algoritmos preditivos, auditoria de evidências fotográficas e assistente inteligente.</p>
-            </div>
-            <div class="badge badge-info" style="font-size: 0.85rem; padding: 6px 14px;">
-              <i data-lucide="sparkles"></i> IA Engine Active (v3.0)
-            </div>
-          </div>
-
-          <!-- AI KPIs -->
-          <div class="grid-stats">
-            <div class="card">
-              <div class="stat-header">
-                <span>Ativos sob Monitoramento IA</span>
-                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
-                  <i data-lucide="cpu"></i>
-                </div>
-              </div>
-              <div class="stat-value">142</div>
-              <div class="stat-sub">Análise contínua de horímetro & MTBF</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>Alertas Preditivos de Risco</span>
-                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
-                  <i data-lucide="alert-circle"></i>
-                </div>
-              </div>
-              <div class="stat-value">1 Ativo Crítico</div>
-              <div class="stat-sub">Risco de falha de 88% em 20 dias</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>Acurácia da Visão Computacional</span>
-                <div class="stat-icon" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">
-                  <i data-lucide="eye"></i>
-                </div>
-              </div>
-              <div class="stat-value">98.4%</div>
-              <div class="stat-sub">Auditoria de fotos antes/depois</div>
-            </div>
-
-            <div class="card">
-              <div class="stat-header">
-                <span>Economia Preditiva Estimada</span>
-                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa;">
-                  <i data-lucide="trending-up"></i>
-                </div>
-              </div>
-              <div class="stat-value">R$ 5.700,00</div>
-              <div class="stat-sub">Evitado em paradas não programadas</div>
-            </div>
-          </div>
-
-          <!-- AI Content Layout -->
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
-            <!-- AI Insights Cards -->
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-              <div class="card">
-                <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                  <i data-lucide="alert-octagon" style="color: var(--danger);"></i>
-                  Matriz Preditiva de Risco de Falhas (Próximos 30 Dias)
-                </h3>
-                <div id="ai-insights-list" style="display: flex; flex-direction: column; gap: 14px;">
-                  <!-- Rendered dynamically -->
-                </div>
-              </div>
-
-              <!-- Smart AI Assistant Box -->
-              <div class="card">
-                <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                  <i data-lucide="bot" style="color: var(--primary);"></i>
-                  Assistente Inteligente da Plataforma (Smart AI Query)
-                </h3>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Faça perguntas em linguagem natural sobre o estado de saúde dos seus ativos ou estoque de peças.</p>
-                
-                <div style="display: flex; gap: 10px; margin-bottom: 14px;">
-                  <input type="text" class="form-control" id="ai-query-input" placeholder="Ex: Qual o equipamento com maior risco de quebra este mês?">
-                  <button class="btn btn-primary" id="btn-submit-ai-query">
-                    <i data-lucide="send"></i> Consultar
-                  </button>
-                </div>
-
-                <div id="ai-query-response-box" style="display: none; padding: 14px; background: var(--bg-primary); border-radius: var(--radius-md); border-left: 3px solid var(--primary); font-size: 0.875rem;">
-                  <!-- Response rendered dynamically -->
-                </div>
-              </div>
-            </div>
-
-            <!-- AI Vision Audit Sidebar -->
-            <div class="card">
-              <h3 style="margin-bottom: 14px;">Auditor de Fotos (Visão Computacional)</h3>
-              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">A IA analisa a resolução, etiqueta de identificação e integridade das fotos tiradas pelos técnicos.</p>
-
-              <div style="display: flex; flex-direction: column; gap: 14px;" id="ai-vision-audit-list">
-                <!-- Audit logs rendered dynamically -->
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 7. CUSTOMERS VIEW -->
-        <section id="view-customers" class="app-view" style="display: none;">
-          <h2>Clientes & Locais de Instalação</h2>
-          <p style="color: var(--text-muted); margin-bottom: 24px;">Gestão de contratos e parques de ativos por cliente.</p>
-          <div id="customers-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
-            <!-- Rendered dynamically -->
-          </div>
-        </section>
-
-        <!-- 8. SETTINGS VIEW -->
-        <section id="view-settings" class="app-view" style="display: none;">
-          <h2>Configurações do Tenant & SaaS</h2>
-          <p style="color: var(--text-muted); margin-bottom: 24px;">Plano ativo, regras de SLA e exportação de dados.</p>
-          <div class="card" style="max-width: 600px;">
-            <h3 style="margin-bottom: 12px;">Plano Contratado: Professional</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Sua empresa possui suporte a ativos ilimitados e Row Level Security (RLS) ativado.</p>
-            <button class="btn btn-secondary">Gerenciar Assinatura SaaS</button>
-          </div>
-        </section>
-
       </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+      
+      <!-- Navigation & Breadcrumb Bar -->
+      <div class="navigation-bar">
+        <button class="btn-back" id="btn-nav-back" style="display: none;">
+          <i data-lucide="arrow-left"></i>
+          <span>Voltar ao Nível Anterior</span>
+        </button>
+
+        <div class="breadcrumbs" id="breadcrumb-trail">
+          <span class="active">Painel Principal</span>
+        </div>
+      </div>
+
+      <!-- Level Title Banner -->
+      <div id="level-header" style="margin-bottom: 24px;">
+        <h2 id="level-title" style="font-size: 1.6rem; margin-bottom: 4px;">Painel de Módulos</h2>
+        <p id="level-subtitle" style="color: var(--text-muted); font-size: 0.9rem;">Selecione um módulo para acessar as suas funcionalidades específicas.</p>
+      </div>
+
+      <!-- 1. Dynamic Block Grid Container (Level Navigation) -->
+      <div class="block-grid" id="block-grid-container">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- 2. Detailed View Container (For Lists, Scanners, Forms, Tables) -->
+      <div id="content-view-container" style="display: none;">
+        <!-- Rendered dynamically based on selected block -->
+      </div>
+
     </main>
   </div>
 
@@ -705,14 +268,6 @@
     </div>
     <div style="font-size: 9px; margin-top: 6px;" id="print-hash">QR-GER-ALFA-9081</div>
   </div>
-
-  <style>
-    @keyframes scanAnimation {
-      0% { top: 10%; }
-      50% { top: 90%; }
-      100% { top: 10%; }
-    }
-  </style>
 
   <!-- Application Logic Modules -->
   <script type="module" src="src/app.js"></script>
