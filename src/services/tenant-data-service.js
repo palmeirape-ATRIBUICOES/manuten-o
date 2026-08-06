@@ -14,7 +14,12 @@ class TenantDataService {
     const stored = localStorage.getItem(key);
 
     if (stored) {
-      return JSON.parse(stored);
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') return parsed;
+      } catch (e) {
+        console.warn('[TenantDataService] Recovering from invalid tenant JSON:', e);
+      }
     }
 
     if (tenantId === 'tenant-alfa-001') {

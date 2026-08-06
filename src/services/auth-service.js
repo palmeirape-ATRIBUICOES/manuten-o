@@ -184,7 +184,18 @@ class AuthService {
   }
 
   getCurrentUser() {
-    return safeJSONParse(STORAGE_KEYS.CURRENT_USER, null);
+    const user = safeJSONParse(STORAGE_KEYS.CURRENT_USER, null);
+    if (user && user.tenantId) return user;
+
+    // Default auto-login fallback if empty
+    const users = this.getAllUsers();
+    if (users && users.length > 0) {
+      const defaultUser = users[0];
+      this.setCurrentUser(defaultUser);
+      return defaultUser;
+    }
+
+    return null;
   }
 
   setCurrentUser(user) {

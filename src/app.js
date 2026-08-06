@@ -29,6 +29,7 @@ async function loadDbConfigModule() {
 
 class AppController {
   constructor() {
+    console.log('[AppController] Constructor chamado...');
     this.navStack = [];
     this.signaturePad = null;
     this.activeWorkOrder = null;
@@ -41,18 +42,24 @@ class AppController {
   }
 
   init() {
-    this.setupGlobalEvents();
-    this.setupNetworkStatusListener();
-    this.setupModalHandlers();
-    this.setupSignaturePad();
-    this.setupForms();
+    console.log('[AppController] init() chamado...');
+    try {
+      this.setupGlobalEvents();
+      this.setupNetworkStatusListener();
+      this.setupModalHandlers();
+      this.setupSignaturePad();
+      this.setupForms();
 
-    const user = authService.getCurrentUser();
-    if (user) {
-      this.currentViewMode = 'ADMIN_PANEL';
+      const user = authService.getCurrentUser();
+      if (user) {
+        this.currentViewMode = 'ADMIN_PANEL';
+      }
+
+      console.log('[AppController] Chamando renderRouterView...');
+      this.renderRouterView();
+    } catch (err) {
+      console.error('[AppController] Erro no init():', err);
     }
-
-    this.renderRouterView();
   }
 
   getActiveTenantData() {
@@ -1019,8 +1026,8 @@ class AppController {
 }
 
 function startApp() {
-  if (!window.app) {
-    window.app = new AppController();
+  if (!window.appController) {
+    window.appController = new AppController();
   }
 }
 
