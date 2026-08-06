@@ -11,17 +11,28 @@ const STORAGE_KEYS = {
 
 class DBService {
   constructor() {
-    this.supabaseUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL) || ENV.SUPABASE_URL;
-    this.supabaseKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY) || ENV.SUPABASE_ANON_KEY;
+    try {
+      this.supabaseUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL) || ENV.SUPABASE_URL;
+      this.supabaseKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY) || ENV.SUPABASE_ANON_KEY;
+    } catch(e) {
+      this.supabaseUrl = ENV.SUPABASE_URL;
+      this.supabaseKey = ENV.SUPABASE_ANON_KEY;
+    }
+    
     this.isConnected = false;
 
     // Auto save default credentials if empty
-    if (!localStorage.getItem(STORAGE_KEYS.SUPABASE_URL)) {
-      localStorage.setItem(STORAGE_KEYS.SUPABASE_URL, this.supabaseUrl);
-      localStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, this.supabaseKey);
-    }
+    try {
+      if (!localStorage.getItem(STORAGE_KEYS.SUPABASE_URL)) {
+        localStorage.setItem(STORAGE_KEYS.SUPABASE_URL, this.supabaseUrl);
+        localStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, this.supabaseKey);
+      }
+    } catch(e) {}
 
-    this.testConnection();
+    // Non-blocking background connectivity test
+    setTimeout(() => {
+      this.testConnection().catch(() => {});
+    }, 100);
   }
 
   getCredentials() {
@@ -35,9 +46,11 @@ class DBService {
   saveCredentials(url, key) {
     this.supabaseUrl = (url || ENV.SUPABASE_URL).trim();
     this.supabaseKey = (key || ENV.SUPABASE_ANON_KEY).trim();
-    localStorage.setItem(STORAGE_KEYS.SUPABASE_URL, this.supabaseUrl);
-    localStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, this.supabaseKey);
-    this.testConnection();
+    try {
+      localStorage.setItem(STORAGE_KEYS.SUPABASE_URL, this.supabaseUrl);
+      localStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, this.supabaseKey);
+    } catch(e) {}
+    this.testConnection().catch(() => {});
   }
 
   async testConnection() {
