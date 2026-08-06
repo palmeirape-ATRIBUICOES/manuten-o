@@ -1,21 +1,21 @@
-import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.5.0';
-import { authService } from './services/auth-service.js?v=2.5.0';
-import { subscriptionService } from './services/subscription-service.js?v=2.5.0';
-import { billingService } from './services/billing-service.js?v=2.5.0';
-import { tenantDataService } from './services/tenant-data-service.js?v=2.5.0';
-import { renderLandingPage } from './views/landing-page.js?v=2.5.0';
-import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.5.0';
-import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.5.0';
-import { NewServiceWizard } from './views/new-service-wizard.js?v=2.5.0';
-import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.5.0';
-import { offlineSyncQueue } from './mock-data.js?v=2.5.0';
+import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.6.0';
+import { authService } from './services/auth-service.js?v=2.6.0';
+import { subscriptionService } from './services/subscription-service.js?v=2.6.0';
+import { billingService } from './services/billing-service.js?v=2.6.0';
+import { tenantDataService } from './services/tenant-data-service.js?v=2.6.0';
+import { renderLandingPage } from './views/landing-page.js?v=2.6.0';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.6.0';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.6.0';
+import { NewServiceWizard } from './views/new-service-wizard.js?v=2.6.0';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.6.0';
+import { offlineSyncQueue } from './mock-data.js?v=2.6.0';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
 let _dbConfigModule = null;
 async function loadDbConfigModule() {
   if (!_dbConfigModule) {
     try {
-      _dbConfigModule = await import('./views/database-config-view.js?v=2.5.0');
+      _dbConfigModule = await import('./views/database-config-view.js?v=2.6.0');
     } catch (e) {
       console.warn('[App] Failed to load database-config-view:', e);
       _dbConfigModule = {
@@ -802,15 +802,6 @@ class AppController {
           iconBgClass: "icon-box-amber",
           badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length}`,
           onClick: () => this.pushLevel(this.getPWAOfflineLevel1Config())
-        },
-        {
-          id: "mod-custom-logo",
-          title: "Logotipo da Empresa",
-          desc: "Personalizar logotipo e marca da empresa",
-          icon: "image",
-          iconBgClass: "icon-box-blue",
-          badge: user && tenantDataService.getTenantLogo(user.tenantId) ? "Personalizado" : "Padrão",
-          onClick: () => this.openCustomLogoModal()
         }
       ]
     };
@@ -1124,6 +1115,19 @@ class AppController {
   setupGlobalEvents() {
     const btnHome = document.getElementById('btn-go-home');
     if (btnHome) btnHome.addEventListener('click', () => this.resetToHome());
+
+    const logoWrapper = document.getElementById('brand-logo-wrapper');
+    if (logoWrapper) {
+      logoWrapper.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const user = authService.getCurrentUser();
+        if (user) {
+          this.openCustomLogoModal();
+        } else {
+          this.resetToHome();
+        }
+      });
+    }
 
     const btnBack = document.getElementById('btn-nav-back');
     if (btnBack) btnBack.addEventListener('click', () => this.popLevel());

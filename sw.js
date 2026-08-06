@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.5.0 - Removed Database Cloud config block (centralized database connected).
+   v2.6.0 - Purged Database Cloud card & Logo card, direct Header Logo upload.
    ========================================================================== */
 
 // Install: skip waiting immediately

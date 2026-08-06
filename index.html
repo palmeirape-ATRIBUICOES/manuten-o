@@ -91,14 +91,17 @@
     <div id="trial-banner-container"></div>
 
     <header class="topbar">
-      <div class="brand-container" id="btn-go-home" title="Ir para a Tela Inicial">
-        <div id="brand-logo-wrapper" style="display: flex; align-items: center; gap: 10px;">
+      <div class="brand-container">
+        <div id="brand-logo-wrapper" title="Clique no ícone para personalizar o logotipo da sua empresa" style="display: flex; align-items: center; gap: 10px; cursor: pointer; position: relative; padding: 2px 6px; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.backgroundColor='rgba(99, 102, 241, 0.08)'" onmouseout="this.style.backgroundColor='transparent'">
           <div class="brand-icon" id="brand-default-icon">
             <i data-lucide="cloud-cog"></i>
           </div>
           <img id="brand-custom-logo" style="display: none; height: 38px; max-width: 160px; object-fit: contain; border-radius: 6px;" alt="Logotipo">
+          <div style="position: absolute; bottom: -2px; right: -2px; background: var(--primary); color: #fff; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 9px; box-shadow: 0 1px 4px rgba(0,0,0,0.2);">
+            ✏️
+          </div>
         </div>
-        <div>
+        <div id="btn-go-home" title="Ir para a Tela Inicial" style="cursor: pointer;">
           <div class="brand-title">OS Cloud</div>
           <div style="font-size: 0.8rem; color: var(--text-muted);" id="header-company-name">Plataforma de Manutenção & Ativos</div>
         </div>
@@ -153,12 +156,12 @@
   <!-- Register the new pass-through Service Worker (replaces old caching one) -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=2.5.0').catch(function() {});
+      navigator.serviceWorker.register('./sw.js?v=2.6.0').catch(function() {});
     }
   </script>
 
   <!-- Application Logic -->
-  <script type="module" src="src/app.js?v=2.5.0"></script>
+  <script type="module" src="src/app.js?v=2.6.0"></script>
 
 </body>
 </html>
