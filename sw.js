@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.2.3 - This SW does NOT cache anything. All requests go to network.
+   v1.9.1 - PRE-SUPABASE CLEAN LOCAL VERSION (PASS-THROUGH)
    ========================================================================== */
 
 // Install: skip waiting immediately

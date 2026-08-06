@@ -2,26 +2,20 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SaaS Asset Management - Gestão do Ciclo de Vida do Ativo Patrimonial</title>
-
+  
   <!-- STEP 1: Force unregister ALL old Service Workers and purge ALL caches BEFORE anything loads -->
   <script>
     (function() {
-      // Unregister all service workers
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          registrations.forEach(function(reg) {
-            reg.unregister();
-          });
+          registrations.forEach(function(reg) { reg.unregister(); });
         });
       }
-      // Delete all caches
       if ('caches' in window) {
         caches.keys().then(function(names) {
-          names.forEach(function(name) {
-            caches.delete(name);
-          });
+          names.forEach(function(name) { caches.delete(name); });
         });
       }
     })();
@@ -33,31 +27,16 @@
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3652/3652191.png">
 
   <!-- Fonts & Icons -->
-  <link rel="stylesheet" href="src/assets/styles/main.css?v=2.2.3">
+  <link rel="stylesheet" href="src/assets/styles/main.css?v=1.9.1">
   <script src="https://unpkg.com/lucide@latest" defer></script>
-
-  <!-- Global Error Boundary -->
-  <script>
-    window.addEventListener('error', function(e) {
-      console.error('[ERROR]', e.message, e.filename, e.lineno);
-      var c = document.getElementById('public-view-container');
-      if (c && !window._err) {
-        window._err = true;
-        c.style.display = 'block';
-        c.innerHTML = '<div style="max-width:500px;margin:40px auto;padding:24px;background:#fff;border:2px solid #fecaca;border-radius:16px;text-align:center">' +
-          '<h3 style="color:#991b1b;margin-bottom:12px">Erro detectado</h3>' +
-          '<p style="font-size:0.85rem;color:#64748b;background:#fef2f2;padding:10px;border-radius:8px;font-family:monospace;word-break:break-all;margin-bottom:16px">' + (e.message || 'Erro desconhecido') + '</p>' +
-          '<button onclick="if(confirm(\'Limpar dados locais e recarregar?\')){localStorage.clear();location.reload()}" style="padding:12px 24px;background:#0f172a;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer">Limpar Cache e Recarregar</button>' +
-          '</div>';
-      }
-    });
-  </script>
 </head>
 <body>
 
   <div id="app">
+    <!-- Top Trial Notification Banner (Rendered dynamically when logged in during trial) -->
     <div id="trial-banner-container"></div>
 
+    <!-- Topbar Header -->
     <header class="topbar">
       <div class="brand-container" id="btn-go-home" title="Ir para a Tela Inicial">
         <div class="brand-icon">
@@ -68,62 +47,289 @@
           <div style="font-size: 0.8rem; color: var(--text-muted);" id="header-company-name">Plataforma de Manutenção & Ativos</div>
         </div>
       </div>
-      <div class="topbar-right" id="header-topbar-right"></div>
+
+      <div class="topbar-right" id="header-topbar-right">
+        <!-- Rendered dynamically by app.js (Login / Reg / Tenant Status / Logout) -->
+      </div>
     </header>
 
+    <!-- Main Container -->
     <main class="main-container">
+      
+      <!-- Public View Container (Landing Page, Register, Login) -->
       <div id="public-view-container"></div>
 
+      <!-- Private View Container (Admin Dashboard) -->
       <div id="private-view-container" style="display: none;">
+        
+        <!-- Top Row Summary KPI Cards -->
         <div class="kpi-row" id="kpi-summary-row">
           <div class="kpi-card">
             <div class="kpi-label">FATURAMENTO MÊS</div>
-            <div class="kpi-value" style="color: #10b981;">R$ 0.00</div>
-            <div class="kpi-sub">Serviços Registrados</div>
+            <div class="kpi-value" style="color: #10b981;">R$ 10.140</div>
+            <div class="kpi-sub">Contratos + Peças</div>
           </div>
+
           <div class="kpi-card">
-            <div class="kpi-label">CLIENTES & ATIVOS</div>
-            <div class="kpi-value" style="color: #6366f1;">0</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">equipamentos</div>
+            <div class="kpi-label">ATIVOS MONITORADOS</div>
+            <div class="kpi-value" style="color: #6366f1;">142</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">100% com QR Code</div>
           </div>
+
           <div class="kpi-card">
             <div class="kpi-label">EQUIPE EM CAMPO</div>
-            <div class="kpi-value">1</div>
+            <div class="kpi-value">8</div>
             <div style="font-size: 0.85rem; color: var(--text-muted);">técnicos ativos</div>
           </div>
+
           <div class="kpi-card">
             <div class="kpi-label">ASSINATURA SAAS</div>
-            <div class="kpi-value" style="color: #3b82f6;">30 dias</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">período gratuito</div>
+            <div class="kpi-value" style="color: #3b82f6;" id="kpi-sub-days">30 dias</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);" id="kpi-sub-status">período gratuito</div>
           </div>
         </div>
 
+        <!-- Navigation & Breadcrumb Bar -->
         <div class="navigation-bar" id="navigation-bar" style="display: none;">
           <button class="btn-back" id="btn-nav-back">
             <i data-lucide="arrow-left"></i>
             <span>Voltar ao Nível Anterior</span>
           </button>
+
           <div class="breadcrumbs" id="breadcrumb-trail">
             <span class="active">Painel Principal</span>
           </div>
         </div>
 
-        <div class="section-heading" id="section-heading">MÓDULOS OPERACIONAIS</div>
-        <div class="block-grid" id="block-grid-container"></div>
-        <div id="content-view-container" style="display: none;"></div>
+        <!-- Section Title: MÓDULOS -->
+        <div class="section-heading" id="section-heading">MÓDULOS</div>
+
+        <!-- Dynamic Block Grid Container -->
+        <div class="block-grid" id="block-grid-container">
+          <!-- Rendered dynamically by app.js -->
+        </div>
+
+        <!-- Detailed View Container -->
+        <div id="content-view-container" style="display: none;">
+          <!-- Rendered dynamically based on selected block -->
+        </div>
+
       </div>
+
     </main>
   </div>
 
-  <!-- Register the new pass-through Service Worker (replaces old caching one) -->
+  <!-- MODALS -->
+
+  <!-- Modal: Cadastrar Novo Ativo -->
+  <div class="modal-overlay" id="modal-add-asset">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Cadastrar Novo Ativo Patrimonial</h3>
+        <button class="btn btn-secondary btn-icon btn-close-modal"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-add-asset">
+        <div class="form-group">
+          <label class="form-label">Tag do Ativo (Código Patrimonial)</label>
+          <input type="text" class="form-control" id="new-asset-tag" placeholder="Ex: GER-500KVA-02" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">Categoria</label>
+            <select class="form-control" id="new-asset-category" required>
+              <option value="cat-gen">Geradores & Energia</option>
+              <option value="cat-hvac">HVAC & Climatização</option>
+              <option value="cat-fleet">Empilhadeiras & Frota</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cliente Proprietário</label>
+            <select class="form-control" id="new-asset-customer" required>
+              <option value="cust-001">Hospital Central São Lucas</option>
+              <option value="cust-002">Condomínio Empresarial Torre Sul</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">Modelo / Fabricante</label>
+            <input type="text" class="form-control" id="new-asset-model" placeholder="Ex: Cummins 500kVA" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Número de Série</label>
+            <input type="text" class="form-control" id="new-asset-serial" placeholder="Ex: SN-998877" required>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar & Gerar QR Code</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Cadastrar Nova Peça no Estoque -->
+  <div class="modal-overlay" id="modal-add-part">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Cadastrar Nova Peça / Insumo</h3>
+        <button class="btn btn-secondary btn-icon btn-close-modal"><i data-lucide="x"></i></button>
+      </div>
+      <form id="form-add-part">
+        <div class="form-group">
+          <label class="form-label">Nome da Peça / Componente</label>
+          <input type="text" class="form-control" id="new-part-name" placeholder="Ex: Correia Dentada Continental 8PK" required>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">SKU / Código</label>
+            <input type="text" class="form-control" id="new-part-sku" placeholder="Ex: PECA-CORR-08" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Categoria de Peça</label>
+            <input type="text" class="form-control" id="new-part-category" placeholder="Ex: Componentes Mecânicos" required>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
+          <div class="form-group">
+            <label class="form-label">Preço de Venda (R$)</label>
+            <input type="number" step="0.01" class="form-control" id="new-part-price" placeholder="150.00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Qtd. Estoque</label>
+            <input type="number" class="form-control" id="new-part-qty" placeholder="10" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Garantia (Meses)</label>
+            <input type="number" class="form-control" id="new-part-warranty" placeholder="6" required>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+          <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Cadastrar Peça</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Prontuário Digital do Ativo -->
+  <div class="modal-overlay" id="modal-asset-detail">
+    <div class="modal-card" style="max-width: 750px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-detail-tag">GER-500KVA-01</h3>
+          <span class="badge badge-success" id="modal-detail-status">INSTALADO</span>
+        </div>
+        <button class="btn btn-secondary btn-icon btn-close-modal"><i data-lucide="x"></i></button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        <div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Cliente & Local</div>
+          <div style="font-weight: 600;" id="modal-detail-customer">Hospital Central</div>
+        </div>
+        <div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Modelo & Custo Acumulado de Manutenção</div>
+          <div style="font-weight: 600;" id="modal-detail-model">Cummins / SN-9912</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px; padding: 16px; background-color: #f8fafc; border-radius: var(--radius-md);">
+        <h4 style="font-size: 0.95rem; margin-bottom: 10px;">Histórico Imutável & Troca de Peças</h4>
+        <div id="modal-detail-history" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- History entries rendered here -->
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" id="btn-print-qr-modal">
+          <i data-lucide="printer"></i>
+          Imprimir Etiqueta QR Code
+        </button>
+        <button class="btn btn-primary btn-close-modal">Fechar Prontuário</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Execução de Ordem de Serviço (PWA Técnico) -->
+  <div class="modal-overlay" id="modal-os-exec">
+    <div class="modal-card" style="max-width: 700px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="os-exec-title">Execução da OS-2026-1088</h3>
+          <span class="badge badge-info" id="os-exec-asset-tag">CHILLER-CARRIER-01</span>
+        </div>
+        <button class="btn btn-secondary btn-icon btn-close-modal"><i data-lucide="x"></i></button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">1. Checklist Obrigatório da Categoria</h4>
+        <div id="os-exec-checklist-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Checklist items rendered here -->
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">2. Evidências Visuais (Fotos Antes / Depois com Auditoria IA)</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div style="border: 1px dashed var(--border-color); padding: 14px; border-radius: var(--radius-md); text-align: center;">
+            <div style="font-size: 0.8rem; margin-bottom: 6px;">Foto Estado Inicial (Antes)</div>
+            <img id="img-preview-before" src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300&auto=format&fit=crop&q=60" style="width: 100%; height: 120px; object-fit: cover; border-radius: var(--radius-sm);">
+          </div>
+
+          <div style="border: 1px dashed var(--border-color); padding: 14px; border-radius: var(--radius-md); text-align: center;">
+            <div style="font-size: 0.8rem; margin-bottom: 6px;">Foto Serviço Concluído (Depois)</div>
+            <div id="box-after-photo" style="height: 120px; background-color: #f8fafc; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: var(--radius-sm);">
+              <span style="font-size: 0.8rem; color: var(--primary);"><i data-lucide="camera"></i> Simular Foto</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 0.9rem; margin-bottom: 6px; color: var(--text-muted);">3. Assinatura Digital do Cliente</h4>
+        <canvas id="signature-canvas" style="width: 100%; height: 140px; background-color: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border-color); cursor: crosshair;"></canvas>
+        <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+          <button type="button" class="btn btn-secondary" id="btn-clear-signature" style="padding: 4px 12px; font-size: 0.75rem;">Limpar Assinatura</button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button class="btn btn-secondary btn-close-modal">Salvar Rascunho</button>
+        <button class="btn btn-primary" id="btn-finish-os-submit">Concluir OS & Gerar Laudo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thermal Label Print Container (Hidden until print) -->
+  <div class="printable-label" id="thermal-label-template" style="display: none;">
+    <h3 style="margin-bottom: 4px;" id="print-tag-name">GER-500KVA-01</h3>
+    <div style="font-size: 10px; margin-bottom: 8px;" id="print-customer">Hospital Central</div>
+    <div style="width: 140px; height: 140px; margin: 0 auto; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+      [QR CODE REAL]
+    </div>
+    <div style="font-size: 9px; margin-top: 6px;" id="print-hash">QR-GER-ALFA-9081</div>
+  </div>
+
+  <!-- Register PWA Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=2.2.3').catch(function() {});
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('[PWA] Service Worker registrado com sucesso:', reg.scope))
+          .catch(err => console.log('[PWA] Erro ao registrar Service Worker:', err));
+      });
     }
   </script>
 
-  <!-- Application Logic -->
-  <script type="module" src="src/app.js?v=2.2.3"></script>
+  <!-- Application Logic Modules -->
+  <script type="module" src="src/app.js?v=1.9.1"></script>
 
 </body>
 </html>

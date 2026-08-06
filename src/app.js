@@ -1,3 +1,7 @@
+/* ==========================================================================
+   APP MAIN CONTROLLER - WIZARD + NOVO SERVIÇO (4 ETAPAS GUIADAS)
+   ========================================================================== */
+
 import { CanvasSignaturePad } from './components/canvas-signature.js';
 import { authService } from './services/auth-service.js';
 import { subscriptionService } from './services/subscription-service.js';
@@ -10,26 +14,8 @@ import { NewServiceWizard } from './views/new-service-wizard.js';
 import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
 import { offlineSyncQueue } from './mock-data.js';
 
-// database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
-let _dbConfigModule = null;
-async function loadDbConfigModule() {
-  if (!_dbConfigModule) {
-    try {
-      _dbConfigModule = await import('./views/database-config-view.js');
-    } catch (e) {
-      console.warn('[App] Failed to load database-config-view:', e);
-      _dbConfigModule = {
-        renderDatabaseConfigView: () => '<div class="card"><h3>Erro ao carregar módulo do banco de dados. Limpe o cache do navegador.</h3></div>',
-        attachDatabaseConfigEvents: () => {}
-      };
-    }
-  }
-  return _dbConfigModule;
-}
-
 class AppController {
   constructor() {
-    console.log('[AppController] Constructor chamado...');
     this.navStack = [];
     this.signaturePad = null;
     this.activeWorkOrder = null;
@@ -42,24 +28,18 @@ class AppController {
   }
 
   init() {
-    console.log('[AppController] init() chamado...');
-    try {
-      this.setupGlobalEvents();
-      this.setupNetworkStatusListener();
-      this.setupModalHandlers();
-      this.setupSignaturePad();
-      this.setupForms();
+    this.setupGlobalEvents();
+    this.setupNetworkStatusListener();
+    this.setupModalHandlers();
+    this.setupSignaturePad();
+    this.setupForms();
 
-      const user = authService.getCurrentUser();
-      if (user) {
-        this.currentViewMode = 'ADMIN_PANEL';
-      }
-
-      console.log('[AppController] Chamando renderRouterView...');
-      this.renderRouterView();
-    } catch (err) {
-      console.error('[AppController] Erro no init():', err);
+    const user = authService.getCurrentUser();
+    if (user) {
+      this.currentViewMode = 'ADMIN_PANEL';
     }
+
+    this.renderRouterView();
   }
 
   getActiveTenantData() {
@@ -116,36 +96,31 @@ class AppController {
       const tenant = authService.getTenantById(currentUser.tenantId) || { name: currentUser.companyName || "Sua Empresa" };
       const sub = subscriptionService.getTenantSubscription(currentUser.tenantId);
       const trialConfig = subscriptionService.getTrialBannerConfig(sub);
-      const tenantData = this.getActiveTenantData() || {};
+      const tenantData = this.getActiveTenantData();
 
       companyTitleEl.textContent = tenant.name;
-
-      // Safe arrays
-      const servicesList = tenantData.services || [];
-      const clientsList = tenantData.clients || [];
-      const equipmentList = tenantData.equipment || [];
 
       // Update KPI Row values
       const kpiRow = document.getElementById('kpi-summary-row');
       if (kpiRow) {
-        const totalCost = servicesList.reduce((acc, w) => acc + (w.totalCost || 0), 0);
+        const totalCost = (tenantData.services || []).reduce((acc, w) => acc + (w.totalCost || 0), 0);
         kpiRow.innerHTML = `
           <div class="kpi-card">
             <div class="kpi-label">FATURAMENTO MÊS</div>
             <div class="kpi-value" style="color: #10b981;">R$ ${totalCost.toFixed(2)}</div>
-            <div class="kpi-sub">${servicesList.length} Serviços Registrados</div>
+            <div class="kpi-sub">${tenantData.services.length} Serviços Registrados</div>
           </div>
 
           <div class="kpi-card">
             <div class="kpi-label">CLIENTES & ATIVOS</div>
-            <div class="kpi-value" style="color: #6366f1;">${clientsList.length}</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">${equipmentList.length} equipamentos</div>
+            <div class="kpi-value" style="color: #6366f1;">${tenantData.clients.length}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${tenantData.equipment.length} equipamentos</div>
           </div>
 
           <div class="kpi-card">
             <div class="kpi-label">EQUIPE EM CAMPO</div>
             <div class="kpi-value">1</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">${currentUser.fullName || 'Admin'}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${currentUser.fullName} (Admin)</div>
           </div>
 
           <div class="kpi-card">
@@ -553,23 +528,6 @@ class AppController {
           onClick: () => this.startNewServiceWizard()
         },
         {
-          id: "mod-database-config",
-          title: "Banco de Dados Cloud",
-          desc: "Supabase PostgreSQL & Sincronização",
-          icon: "database",
-          iconBgClass: "icon-box-emerald",
-          badge: "Cloud",
-          onClick: async () => {
-            const dbMod = await loadDbConfigModule();
-            this.pushLevel({
-              title: "Configuração de Banco de Dados Cloud",
-              breadcrumbTitle: "Banco de Dados",
-              renderContent: () => dbMod.renderDatabaseConfigView(),
-              onContentLoaded: () => dbMod.attachDatabaseConfigEvents()
-            });
-          }
-        },
-        {
           id: "mod-services-list",
           title: "Ordens de Serviço",
           desc: "Visualizar histórico & atendimentos",
@@ -622,6 +580,15 @@ class AppController {
           iconBgClass: "icon-box-amber",
           badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length}`,
           onClick: () => this.pushLevel(this.getPWAOfflineLevel1Config())
+        },
+        {
+          id: "mod-qr-scanner",
+          title: "Leitor QR Code",
+          desc: "Escaneamento de ativos em campo",
+          icon: "qr-code",
+          iconBgClass: "icon-box-dark",
+          badge: "PWA",
+          onClick: () => this.pushLevel(this.getQRScannerLevel1Config())
         }
       ]
     };
