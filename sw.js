@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.2.4 - Local bundled Lucide & On-Screen Debug HUD included.
+   v2.2.5 - Entry point src/main-app.js + .nojekyll included.
    ========================================================================== */
 
 // Install: skip waiting immediately
