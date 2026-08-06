@@ -17,7 +17,6 @@ class AuthService {
   }
 
   initStorage() {
-    // Seed default tenant if not existing
     if (!localStorage.getItem(STORAGE_KEYS.TENANTS)) {
       const defaultTenants = [
         {
@@ -39,6 +38,7 @@ class AuthService {
           email: "gestor@alfa.com.br",
           phone: "(81) 99887-1122",
           passwordHash: "hash_demo_123",
+          rawPassword: "123", // fallback for demo
           role: "ADMIN",
           isActive: true,
           createdAt: new Date("2026-01-01").toISOString()
@@ -49,15 +49,15 @@ class AuthService {
 
     if (!localStorage.getItem(STORAGE_KEYS.SUBSCRIPTIONS)) {
       const now = new Date();
-      const trialStarted = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
-      const trialEnds = new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000);   // 20 days remaining
+      const trialStarted = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+      const trialEnds = new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000);
 
       const defaultSubscriptions = [
         {
           id: "sub-001",
           tenantId: "tenant-alfa-001",
           planId: "professional",
-          subscriptionStatus: "trial", // 'trial', 'active', 'past_due', 'canceled', 'expired', 'blocked'
+          subscriptionStatus: "trial",
           trialStartedAt: trialStarted.toISOString(),
           trialEndsAt: trialEnds.toISOString(),
           subscriptionStartedAt: null,
@@ -71,13 +71,15 @@ class AuthService {
 
   // Register New User & Create New Tenant with 30-Day Trial
   registerUser({ fullName, companyName, email, phone, password }) {
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+    const users = this.getAllUsers();
     const tenants = JSON.parse(localStorage.getItem(STORAGE_KEYS.TENANTS) || '[]');
     const subscriptions = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUBSCRIPTIONS) || '[]');
 
+    const cleanEmail = email.trim().toLowerCase();
+
     // Check if email already exists
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
-      throw new Error("Este e-mail já está cadastrado no sistema. Por favor, faça login ou use outro e-mail.");
+    if (users.find(u => u.email.toLowerCase() === cleanEmail)) {
+      throw new Error("Este e-mail já está cadastrado no sistema. Faça login ou utilize outro e-mail.");
     }
 
     const tenantId = `tenant-${Date.now()}`;
@@ -100,9 +102,11 @@ class AuthService {
       id: userId,
       tenantId: tenantId,
       fullName: fullName,
-      email: email.toLowerCase(),
+      companyName: companyName,
+      email: cleanEmail,
       phone: phone,
       passwordHash: this.hashPassword(password),
+      rawPassword: password, // Store plain password fallback for client-side demo resilience
       role: "ADMIN",
       isActive: true,
       createdAt: now.toISOString()
@@ -135,15 +139,22 @@ class AuthService {
   }
 
   login(email, password) {
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-    const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const users = this.getAllUsers();
+    const cleanEmail = email.trim().toLowerCase();
+    const foundUser = users.find(u => u.email.toLowerCase() === cleanEmail);
 
     if (!foundUser) {
-      throw new Error("E-mail ou senha incorretos.");
+      throw new Error(`E-mail "${email}" não foi encontrado em nosso cadastro. Verifique a grafia ou crie uma nova conta.`);
     }
 
-    if (foundUser.passwordHash !== this.hashPassword(password) && foundUser.passwordHash !== "hash_demo_123") {
-      throw new Error("E-mail ou senha incorretos.");
+    const calculatedHash = this.hashPassword(password);
+    const isValidPassword = 
+      foundUser.passwordHash === calculatedHash || 
+      foundUser.rawPassword === password || 
+      foundUser.passwordHash === "hash_demo_123";
+
+    if (!isValidPassword) {
+      throw new Error("Senha incorreta. Verifique se a tecla Caps Lock está ativada.");
     }
 
     if (!foundUser.isActive) {
@@ -152,6 +163,10 @@ class AuthService {
 
     this.setCurrentUser(foundUser);
     return foundUser;
+  }
+
+  getAllUsers() {
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
   }
 
   logout() {
@@ -173,8 +188,9 @@ class AuthService {
   }
 
   recoverPassword(email) {
-    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const users = this.getAllUsers();
+    const cleanEmail = email.trim().toLowerCase();
+    const user = users.find(u => u.email.toLowerCase() === cleanEmail);
     if (!user) {
       throw new Error("E-mail não encontrado em nossa base de dados.");
     }
@@ -182,7 +198,6 @@ class AuthService {
   }
 
   hashPassword(password) {
-    // Basic hash simulation for client-side storage
     let hash = 0;
     for (let i = 0; i < password.length; i++) {
       hash = (hash << 5) - hash + password.charCodeAt(i);
