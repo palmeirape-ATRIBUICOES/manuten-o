@@ -93,31 +93,36 @@ class AppController {
       const tenant = authService.getTenantById(currentUser.tenantId) || { name: currentUser.companyName || "Sua Empresa" };
       const sub = subscriptionService.getTenantSubscription(currentUser.tenantId);
       const trialConfig = subscriptionService.getTrialBannerConfig(sub);
-      const tenantData = this.getActiveTenantData();
+      const tenantData = this.getActiveTenantData() || {};
 
       companyTitleEl.textContent = tenant.name;
+
+      // Safe arrays
+      const servicesList = tenantData.services || [];
+      const clientsList = tenantData.clients || [];
+      const equipmentList = tenantData.equipment || [];
 
       // Update KPI Row values
       const kpiRow = document.getElementById('kpi-summary-row');
       if (kpiRow) {
-        const totalCost = (tenantData.services || []).reduce((acc, w) => acc + (w.totalCost || 0), 0);
+        const totalCost = servicesList.reduce((acc, w) => acc + (w.totalCost || 0), 0);
         kpiRow.innerHTML = `
           <div class="kpi-card">
             <div class="kpi-label">FATURAMENTO MÊS</div>
             <div class="kpi-value" style="color: #10b981;">R$ ${totalCost.toFixed(2)}</div>
-            <div class="kpi-sub">${tenantData.services.length} Serviços Registrados</div>
+            <div class="kpi-sub">${servicesList.length} Serviços Registrados</div>
           </div>
 
           <div class="kpi-card">
             <div class="kpi-label">CLIENTES & ATIVOS</div>
-            <div class="kpi-value" style="color: #6366f1;">${tenantData.clients.length}</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">${tenantData.equipment.length} equipamentos</div>
+            <div class="kpi-value" style="color: #6366f1;">${clientsList.length}</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${equipmentList.length} equipamentos</div>
           </div>
 
           <div class="kpi-card">
             <div class="kpi-label">EQUIPE EM CAMPO</div>
             <div class="kpi-value">1</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">${currentUser.fullName} (Admin)</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">${currentUser.fullName || 'Admin'}</div>
           </div>
 
           <div class="kpi-card">
