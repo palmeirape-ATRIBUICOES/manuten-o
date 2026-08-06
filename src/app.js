@@ -519,6 +519,15 @@ class AppController {
       breadcrumbTitle: "Painel Principal",
       blocks: [
         {
+          id: "mod-new-service-btn",
+          title: "+ Novo serviço",
+          desc: "Fluxo curto guiado em 4 etapas",
+          icon: "plus-circle",
+          iconBgClass: "icon-box-emerald",
+          badge: "Novo",
+          onClick: () => this.startNewServiceWizard()
+        },
+        {
           id: "mod-database-config",
           title: "Banco de Dados Cloud",
           desc: "Supabase PostgreSQL & Sincronização",
@@ -585,15 +594,6 @@ class AppController {
           iconBgClass: "icon-box-amber",
           badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length}`,
           onClick: () => this.pushLevel(this.getPWAOfflineLevel1Config())
-        },
-        {
-          id: "mod-qr-scanner",
-          title: "Leitor QR Code",
-          desc: "Escaneamento de ativos em campo",
-          icon: "qr-code",
-          iconBgClass: "icon-box-dark",
-          badge: "PWA",
-          onClick: () => this.pushLevel(this.getQRScannerLevel1Config())
         }
       ]
     };
