@@ -1,6 +1,8 @@
 /* ==========================================================================
-   DB SERVICE - SUPABASE POSTGRESQL CLOUD REST ADAPTER & DUAL PERSISTENCE
+   DB SERVICE - SUPABASE POSTGRESQL CLOUD REST ADAPTER & AUTOMATIC CREDENTIALS
    ========================================================================== */
+
+import { ENV } from '../config/env.js';
 
 const STORAGE_KEYS = {
   SUPABASE_URL: 'saas_asset_supabase_url',
@@ -9,9 +11,17 @@ const STORAGE_KEYS = {
 
 class DBService {
   constructor() {
-    this.supabaseUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL) || '';
-    this.supabaseKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY) || '';
+    this.supabaseUrl = localStorage.getItem(STORAGE_KEYS.SUPABASE_URL) || ENV.SUPABASE_URL;
+    this.supabaseKey = localStorage.getItem(STORAGE_KEYS.SUPABASE_KEY) || ENV.SUPABASE_ANON_KEY;
     this.isConnected = false;
+
+    // Auto save default credentials if empty
+    if (!localStorage.getItem(STORAGE_KEYS.SUPABASE_URL)) {
+      localStorage.setItem(STORAGE_KEYS.SUPABASE_URL, this.supabaseUrl);
+      localStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, this.supabaseKey);
+    }
+
+    this.testConnection();
   }
 
   getCredentials() {
@@ -23,10 +33,11 @@ class DBService {
   }
 
   saveCredentials(url, key) {
-    this.supabaseUrl = url.trim();
-    this.supabaseKey = key.trim();
+    this.supabaseUrl = (url || ENV.SUPABASE_URL).trim();
+    this.supabaseKey = (key || ENV.SUPABASE_ANON_KEY).trim();
     localStorage.setItem(STORAGE_KEYS.SUPABASE_URL, this.supabaseUrl);
     localStorage.setItem(STORAGE_KEYS.SUPABASE_KEY, this.supabaseKey);
+    this.testConnection();
   }
 
   async testConnection() {
@@ -46,12 +57,12 @@ class DBService {
         }
       });
 
-      if (response.ok || response.status === 206) {
+      if (response.ok || response.status === 206 || response.status === 200) {
         this.isConnected = true;
         return { success: true, message: "🟢 Conexão com o Supabase PostgreSQL Cloud estabelecida com sucesso!" };
       } else {
         this.isConnected = false;
-        return { success: false, message: `Erro ao conectar (HTTP ${response.status}). Verifique a URL e a Chave.` };
+        return { success: false, message: `Erro ao conectar (HTTP ${response.status}). Verifique se as tabelas foram criadas via schema.sql.` };
       }
     } catch (err) {
       this.isConnected = false;
@@ -59,8 +70,8 @@ class DBService {
     }
   }
 
-  async syncTableToCloud(tableName, records) {
-    if (!this.supabaseUrl || !this.supabaseKey || records.length === 0) return false;
+  async syncRecordToCloud(tableName, record) {
+    if (!this.supabaseUrl || !this.supabaseKey) return false;
 
     try {
       const endpoint = `${this.supabaseUrl.replace(/\/$/, '')}/rest/v1/${tableName}`;
@@ -72,16 +83,16 @@ class DBService {
           'Content-Type': 'application/json',
           'Prefer': 'resolution=merge-duplicates'
         },
-        body: JSON.stringify(records)
+        body: JSON.stringify(record)
       });
       return response.ok;
     } catch (err) {
-      console.warn(`Erro ao sincronizar tabela ${tableName} com Supabase Cloud:`, err);
+      console.warn(`Erro ao sincronizar registro na tabela ${tableName}:`, err);
       return false;
     }
   }
 
-  async fetchTableFromCloud(tableName, companyId) {
+  async fetchRecordsFromCloud(tableName, companyId) {
     if (!this.supabaseUrl || !this.supabaseKey) return null;
 
     try {
@@ -99,7 +110,7 @@ class DBService {
       }
       return null;
     } catch (err) {
-      console.warn(`Erro ao buscar dados remotos da tabela ${tableName}:`, err);
+      console.warn(`Erro ao buscar dados da tabela ${tableName}:`, err);
       return null;
     }
   }
