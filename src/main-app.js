@@ -1,21 +1,21 @@
-import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.2.8';
-import { authService } from './services/auth-service.js?v=2.2.8';
-import { subscriptionService } from './services/subscription-service.js?v=2.2.8';
-import { billingService } from './services/billing-service.js?v=2.2.8';
-import { tenantDataService } from './services/tenant-data-service.js?v=2.2.8';
-import { renderLandingPage } from './views/landing-page.js?v=2.2.8';
-import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.2.8';
-import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.2.8';
-import { NewServiceWizard } from './views/new-service-wizard.js?v=2.2.8';
-import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.2.8';
-import { offlineSyncQueue } from './mock-data.js?v=2.2.8';
+import { CanvasSignaturePad } from './components/canvas-signature.js?v=2.3.0';
+import { authService } from './services/auth-service.js?v=2.3.0';
+import { subscriptionService } from './services/subscription-service.js?v=2.3.0';
+import { billingService } from './services/billing-service.js?v=2.3.0';
+import { tenantDataService } from './services/tenant-data-service.js?v=2.3.0';
+import { renderLandingPage } from './views/landing-page.js?v=2.3.0';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=2.3.0';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=2.3.0';
+import { NewServiceWizard } from './views/new-service-wizard.js?v=2.3.0';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=2.3.0';
+import { offlineSyncQueue } from './mock-data.js?v=2.3.0';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
 let _dbConfigModule = null;
 async function loadDbConfigModule() {
   if (!_dbConfigModule) {
     try {
-      _dbConfigModule = await import('./views/database-config-view.js?v=2.2.7');
+      _dbConfigModule = await import('./views/database-config-view.js?v=2.3.0');
     } catch (e) {
       console.warn('[App] Failed to load database-config-view:', e);
       _dbConfigModule = {
@@ -37,6 +37,11 @@ class AppController {
 
     this.currentViewMode = 'PUBLIC_LANDING';
     this.wizardInstance = null;
+    try {
+      this.hideFinancials = localStorage.getItem('saas_hide_financials') === 'true';
+    } catch(e) {
+      this.hideFinancials = false;
+    }
 
     this.init();
   }
@@ -129,10 +134,17 @@ class AppController {
       const kpiRow = document.getElementById('kpi-summary-row');
       if (kpiRow) {
         const totalCost = servicesList.reduce((acc, w) => acc + (w.totalCost || 0), 0);
+        const displayCost = this.hideFinancials ? 'R$ ••••••' : `R$ ${totalCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
         kpiRow.innerHTML = `
-          <div class="kpi-card">
-            <div class="kpi-label">FATURAMENTO MÊS</div>
-            <div class="kpi-value" style="color: #10b981;">R$ ${totalCost.toFixed(2)}</div>
+          <div class="kpi-card" style="position: relative;">
+            <div class="kpi-label" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>FATURAMENTO MÊS</span>
+              <button id="btn-toggle-financial-privacy" title="${this.hideFinancials ? 'Exibir faturamento' : 'Ocultar faturamento'}" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; display: inline-flex; align-items: center; transition: all 0.2s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'">
+                <i data-lucide="${this.hideFinancials ? 'eye-off' : 'eye'}" style="width: 16px; height: 16px;"></i>
+              </button>
+            </div>
+            <div class="kpi-value" style="color: #10b981;">${displayCost}</div>
             <div class="kpi-sub">${servicesList.length} Serviços Registrados</div>
           </div>
 
@@ -154,6 +166,16 @@ class AppController {
             <div style="font-size: 0.85rem; color: var(--text-muted);">${sub.subscriptionStatus === 'trial' ? 'período gratuito' : 'assinatura ativa'}</div>
           </div>
         `;
+
+        const btnEye = document.getElementById('btn-toggle-financial-privacy');
+        if (btnEye) {
+          btnEye.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.hideFinancials = !this.hideFinancials;
+            try { localStorage.setItem('saas_hide_financials', this.hideFinancials); } catch(ex) {}
+            this.renderRouterView();
+          });
+        }
       }
 
       // Render Trial Top Banner

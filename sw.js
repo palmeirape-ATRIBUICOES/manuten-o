@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.2.8 - Purge stale mvkzwqmioytlsjyerxvsw localStorage credentials.
+   v2.3.0 - Clean initial workspace state & Financial privacy Eye Toggle.
    ========================================================================== */
 
 // Install: skip waiting immediately

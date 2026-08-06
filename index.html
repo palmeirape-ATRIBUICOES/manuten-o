@@ -147,36 +147,15 @@
     </main>
   </div>
 
-  <!-- Floating Debug HUD Badge & Panel -->
-  <div id="debug-hud-badge" style="position: fixed; bottom: 12px; right: 12px; z-index: 99999; background: #0f172a; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-family: monospace; font-size: 0.75rem; border: 1px solid #334155; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 6px;" onclick="var p = document.getElementById('debug-hud-panel'); p.style.display = p.style.display === 'none' ? 'flex' : 'none';">
-    <span>🐛 DEBUG HUD</span>
-    <span id="debug-hud-count" style="background: #1e293b; color: #fff; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem;">0 erros</span>
-  </div>
-
-  <div id="debug-hud-panel" style="display: none; position: fixed; bottom: 50px; right: 12px; left: 12px; max-width: 550px; height: 320px; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 12px; z-index: 99999; padding: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); font-family: monospace; font-size: 0.75rem; flex-direction: column;">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 8px;">
-      <strong style="color: #38bdf8;">🐛 Diagnóstico do Sistema em Tempo Real (v2.2.5)</strong>
-      <button onclick="document.getElementById('debug-hud-panel').style.display='none'" style="background: none; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; font-size: 1.1rem;">✕</button>
-    </div>
-    <div id="debug-hud-status" style="background: #1e293b; padding: 6px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 0.7rem; color: #94a3b8;">
-      Lucide: <span id="debug-lucide-status" style="color:#10b981">Local OK</span> | App: <span id="debug-app-status" style="color:#38bdf8">Iniciando...</span>
-    </div>
-    <div id="debug-hud-logs" style="flex: 1; overflow-y: auto; background: #020617; padding: 8px; border-radius: 6px; white-space: pre-wrap; line-height: 1.4;"></div>
-    <div style="display: flex; gap: 8px; margin-top: 8px;">
-      <button onclick="navigator.clipboard.writeText(window._debugLogs ? window._debugLogs.join('\n') : ''); alert('Logs copiados!');" style="flex: 1; padding: 6px; background: #334155; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.75rem;">📋 Copiar Logs</button>
-      <button onclick="if(confirm('Limpar localStorage e recarregar?')){localStorage.clear();location.reload()}" style="flex: 1; padding: 6px; background: #991b1b; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.75rem;">🗑️ Reset Total</button>
-    </div>
-  </div>
-
   <!-- Register the new pass-through Service Worker (replaces old caching one) -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=2.2.8').catch(function() {});
+      navigator.serviceWorker.register('./sw.js?v=2.3.0').catch(function() {});
     }
   </script>
 
   <!-- Application Logic -->
-  <script type="module" src="src/app.js?v=2.2.8"></script>
+  <script type="module" src="src/app.js?v=2.3.0"></script>
 
 </body>
 </html>
