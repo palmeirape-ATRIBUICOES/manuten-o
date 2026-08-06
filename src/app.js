@@ -513,59 +513,6 @@ class AppController {
     const sub = user ? subscriptionService.getTenantSubscription(user.tenantId) : null;
     const tenantData = this.getActiveTenantData();
 
-    // Friendly empty state first time
-    if (tenantData.services.length === 0) {
-      return {
-        title: "Painel do Gestor",
-        subtitle: "Módulos de gestão de ativos e serviços",
-        breadcrumbTitle: "Painel Principal",
-        renderContent: () => `
-          <div class="card" style="text-align: center; padding: 48px 24px; max-width: 650px; margin: 0 auto;">
-            <div class="block-icon-box icon-box-emerald" style="margin: 0 auto 20px; width: 64px; height: 64px; font-size: 2rem;">
-              <i data-lucide="wrench"></i>
-            </div>
-            <h2 style="color: #0f172a; margin-bottom: 10px;">Você ainda não cadastrou nenhum serviço</h2>
-            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 28px; line-height: 1.5;">
-              Cadastre o cliente, o equipamento e as fotos da manutenção em poucos passos guiados.
-            </p>
-            
-            <button class="btn-main-new-service" id="btn-empty-start-wizard" style="max-width: 320px; margin: 0 auto 24px;">
-              <i data-lucide="plus-circle"></i> Criar Meu Primeiro Serviço
-            </button>
-          </div>
-
-          <div class="section-heading" style="margin-top: 36px;">OUTROS MÓDULOS DO SISTEMA</div>
-          <div class="block-grid">
-            <div class="block-card" id="card-empty-mod-clients">
-              <div class="block-icon-box icon-box-blue">
-                <i data-lucide="users"></i>
-              </div>
-              <div class="block-card-title">Clientes</div>
-              <div class="block-card-desc">Cadastro e consulta de clientes</div>
-            </div>
-
-            <div class="block-card" id="card-empty-mod-sub">
-              <div class="block-icon-box icon-box-purple">
-                <i data-lucide="credit-card"></i>
-              </div>
-              <div class="block-card-title">Plano e Assinatura</div>
-              <div class="block-card-desc">Gestão dos 30 dias de trial</div>
-            </div>
-          </div>
-        `,
-        onContentLoaded: () => {
-          const btnStart = document.getElementById('btn-empty-start-wizard');
-          if (btnStart) btnStart.addEventListener('click', () => this.startNewServiceWizard());
-
-          const cardClients = document.getElementById('card-empty-mod-clients');
-          if (cardClients) cardClients.addEventListener('click', () => this.pushLevel(this.getCustomersLevel1Config()));
-
-          const cardSub = document.getElementById('card-empty-mod-sub');
-          if (cardSub) cardSub.addEventListener('click', () => this.pushLevel(this.getSubscriptionManagementLevel1Config()));
-        }
-      };
-    }
-
     return {
       title: "Painel do Gestor",
       subtitle: "Módulos de gestão de ativos e serviços",
@@ -577,16 +524,16 @@ class AppController {
           desc: "Fluxo curto guiado em 4 etapas",
           icon: "plus-circle",
           iconBgClass: "icon-box-emerald",
-          badge: "Criar",
+          badge: "Novo",
           onClick: () => this.startNewServiceWizard()
         },
         {
           id: "mod-services-list",
-          title: "Serviços Cadastrados",
-          desc: "Visualizar histórico & Ordens de Serviço",
+          title: "Ordens de Serviço",
+          desc: "Visualizar histórico & atendimentos",
           icon: "wrench",
           iconBgClass: "icon-box-purple",
-          badge: `${tenantData.services.length}`,
+          badge: `${(tenantData.services || []).length}`,
           onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
         },
         {
@@ -595,7 +542,7 @@ class AppController {
           desc: "Cadastro e parques por cliente",
           icon: "users",
           iconBgClass: "icon-box-blue",
-          badge: `${tenantData.clients.length}`,
+          badge: `${(tenantData.clients || []).length}`,
           onClick: () => this.pushLevel(this.getCustomersLevel1Config())
         },
         {
@@ -613,7 +560,7 @@ class AppController {
           desc: "Gestão do ciclo de vida & QR Code",
           icon: "box",
           iconBgClass: "icon-box-teal",
-          badge: `${tenantData.assets.length}`,
+          badge: `${(tenantData.assets || []).length}`,
           onClick: () => this.pushLevel(this.getAssetsLevel1Config())
         },
         {
@@ -622,7 +569,7 @@ class AppController {
           desc: "Planos de manutenção & laudo sanitário",
           icon: "calendar-check",
           iconBgClass: "icon-box-cyan",
-          badge: tenantData.pmocPlans.length > 0 ? "96%" : "0",
+          badge: (tenantData.pmocPlans || []).length > 0 ? "96%" : "0",
           onClick: () => this.pushLevel(this.getPMOCLevel1Config())
         },
         {
