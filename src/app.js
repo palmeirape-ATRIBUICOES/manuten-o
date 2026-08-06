@@ -11,8 +11,7 @@ import { renderLandingPage } from './views/landing-page.js';
 import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js';
 import { renderSubscriptionManagementPage } from './views/subscription-page.js';
 import { NewServiceWizard } from './views/new-service-wizard.js';
-import { renderServiceDetailView } from './views/service-detail-view.js';
-import { offlineSyncQueue } from './mock-data.js';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
 
 class AppController {
   constructor() {
@@ -58,15 +57,15 @@ class AppController {
 
     this.wizardInstance = new NewServiceWizard(
       (createdServiceId) => {
-        // On completion -> view created service
+        const tenantId = user ? user.tenantId : 'tenant-alfa-001';
         this.pushLevel({
           title: "Detalhamento do Serviço",
           breadcrumbTitle: "Ver Serviço",
-          renderContent: () => renderServiceDetailView(createdServiceId)
+          renderContent: () => renderServiceDetailView(createdServiceId),
+          onContentLoaded: () => attachServiceDetailEvents(tenantId, createdServiceId, () => this.renderCurrentLevel())
         });
       },
       () => {
-        // On cancel/back -> return to home
         this.resetToHome();
       }
     );
@@ -748,10 +747,13 @@ class AppController {
         document.querySelectorAll('.btn-open-service-detail').forEach(btn => {
           btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-id');
+            const user = authService.getCurrentUser();
+            const tenantId = user ? user.tenantId : 'tenant-alfa-001';
             this.pushLevel({
               title: "Detalhamento do Serviço",
               breadcrumbTitle: "Ver Serviço",
-              renderContent: () => renderServiceDetailView(id)
+              renderContent: () => renderServiceDetailView(id),
+              onContentLoaded: () => attachServiceDetailEvents(tenantId, id, () => this.renderCurrentLevel())
             });
           });
         });
