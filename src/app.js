@@ -1,9 +1,15 @@
 /* ==========================================================================
-   APP MAIN CONTROLLER - BLOCK-BASED NAVIGATION WITH PWA OFFLINE SYNC (OPTION 3)
+   APP MAIN CONTROLLER - PUBLIC LANDING, AUTH, TRIAL ENGINE & BLOCK NAVIGATION
    ========================================================================== */
 
 import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights, pmocPlans, offlineSyncQueue } from './mock-data.js';
 import { CanvasSignaturePad } from './components/canvas-signature.js';
+import { authService } from './services/auth-service.js';
+import { subscriptionService } from './services/subscription-service.js';
+import { billingService } from './services/billing-service.js';
+import { renderLandingPage } from './views/landing-page.js';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js';
 
 class AppController {
   constructor() {
@@ -11,6 +17,8 @@ class AppController {
     this.signaturePad = null;
     this.activeWorkOrder = null;
     this.isOnline = navigator.onLine;
+
+    this.currentViewMode = 'PUBLIC_LANDING'; // 'PUBLIC_LANDING', 'REGISTER', 'LOGIN', 'FORGOT', 'ADMIN_PANEL'
 
     this.init();
   }
@@ -22,8 +30,280 @@ class AppController {
     this.setupSignaturePad();
     this.setupForms();
 
-    // Start at Level 0: Home Dashboard
-    this.pushLevel(this.getLevel0Config());
+    // Check if user is already logged in
+    const user = authService.getCurrentUser();
+    if (user) {
+      this.currentViewMode = 'ADMIN_PANEL';
+    }
+
+    this.renderRouterView();
+  }
+
+  renderRouterView() {
+    const publicContainer = document.getElementById('public-view-container');
+    const privateContainer = document.getElementById('private-view-container');
+    const trialBannerContainer = document.getElementById('trial-banner-container');
+    const topbarRight = document.getElementById('header-topbar-right');
+    const companyTitleEl = document.getElementById('header-company-name');
+
+    const currentUser = authService.getCurrentUser();
+
+    if (this.currentViewMode === 'ADMIN_PANEL' && currentUser) {
+      publicContainer.style.display = 'none';
+      publicContainer.innerHTML = '';
+      privateContainer.style.display = 'block';
+
+      const tenant = authService.getTenantById(currentUser.tenantId) || { name: currentUser.companyName || "Sua Empresa" };
+      const sub = subscriptionService.getTenantSubscription(currentUser.tenantId);
+      const trialConfig = subscriptionService.getTrialBannerConfig(sub);
+
+      companyTitleEl.textContent = tenant.name;
+
+      // Render Trial Top Banner
+      if (trialConfig) {
+        trialBannerContainer.innerHTML = `
+          <div class="trial-banner" style="${trialConfig.messageStyle}">
+            <span>💡 <strong>Aviso de Teste Grátis:</strong> ${trialConfig.text}</span>
+            <button class="btn-trial-action" id="btn-trial-upgrade-now">Conhecer Planos</button>
+          </div>
+        `;
+        document.getElementById('btn-trial-upgrade-now').addEventListener('click', () => {
+          this.pushLevel(this.getSubscriptionManagementLevel1Config());
+        });
+      } else {
+        trialBannerContainer.innerHTML = '';
+      }
+
+      // Update Topbar Right
+      topbarRight.innerHTML = `
+        <div class="tenant-pill" id="pwa-status-pill">
+          <i data-lucide="wifi"></i> <span>ONLINE</span>
+        </div>
+        <div class="tenant-pill" style="background-color: #f1f5f9; color: #334155;">
+          🏢 ${tenant.name}
+        </div>
+        <div class="user-role-badge">
+          <span>👑 ${currentUser.fullName}</span>
+        </div>
+        <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.85rem;" id="btn-app-logout">
+          Sair
+        </button>
+      `;
+
+      document.getElementById('btn-app-logout').addEventListener('click', () => {
+        authService.logout();
+        this.currentViewMode = 'PUBLIC_LANDING';
+        this.renderRouterView();
+      });
+
+      // Update KPI days
+      const kpiSubDays = document.getElementById('kpi-sub-days');
+      const kpiSubStatus = document.getElementById('kpi-sub-status');
+      if (kpiSubDays && kpiSubStatus) {
+        kpiSubDays.textContent = `${sub.remainingDays} dias`;
+        kpiSubDays.style.color = sub.remainingDays <= 3 ? 'var(--danger)' : '#3b82f6';
+        kpiSubStatus.textContent = sub.subscriptionStatus === 'trial' ? 'período gratuito' : 'assinatura ativa';
+      }
+
+      // If expired, auto-redirect to subscription block
+      if (sub.subscriptionStatus === 'expired' || sub.subscriptionStatus === 'blocked') {
+        this.navStack = [];
+        this.pushLevel(this.getSubscriptionManagementLevel1Config());
+      } else if (this.navStack.length === 0) {
+        this.pushLevel(this.getLevel0Config());
+      } else {
+        this.renderCurrentLevel();
+      }
+
+    } else {
+      // Public Views
+      privateContainer.style.display = 'none';
+      trialBannerContainer.innerHTML = '';
+      publicContainer.style.display = 'block';
+
+      companyTitleEl.textContent = "Plataforma de Manutenção & Ativos";
+
+      topbarRight.innerHTML = `
+        <button class="btn btn-secondary" id="btn-top-login">Entrar</button>
+        <button class="btn btn-primary" id="btn-top-register">Começar Teste Grátis</button>
+      `;
+
+      document.getElementById('btn-top-login').addEventListener('click', () => {
+        this.currentViewMode = 'LOGIN';
+        this.renderRouterView();
+      });
+
+      document.getElementById('btn-top-register').addEventListener('click', () => {
+        this.currentViewMode = 'REGISTER';
+        this.renderRouterView();
+      });
+
+      if (this.currentViewMode === 'REGISTER') {
+        publicContainer.innerHTML = renderRegisterPage();
+        this.attachRegisterFormEvents();
+      } else if (this.currentViewMode === 'LOGIN') {
+        publicContainer.innerHTML = renderLoginPage();
+        this.attachLoginFormEvents();
+      } else if (this.currentViewMode === 'FORGOT') {
+        publicContainer.innerHTML = renderForgotPasswordPage();
+        this.attachForgotPasswordEvents();
+      } else {
+        // Default PUBLIC_LANDING
+        publicContainer.innerHTML = renderLandingPage();
+        this.attachLandingPageEvents();
+      }
+    }
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  }
+
+  attachLandingPageEvents() {
+    const btnHeroTrial = document.getElementById('btn-hero-trial');
+    const btnHeroLogin = document.getElementById('btn-hero-login');
+
+    if (btnHeroTrial) {
+      btnHeroTrial.addEventListener('click', () => {
+        this.currentViewMode = 'REGISTER';
+        this.renderRouterView();
+      });
+    }
+
+    if (btnHeroLogin) {
+      btnHeroLogin.addEventListener('click', () => {
+        this.currentViewMode = 'LOGIN';
+        this.renderRouterView();
+      });
+    }
+
+    document.querySelectorAll('.btn-choose-plan').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.currentViewMode = 'REGISTER';
+        this.renderRouterView();
+      });
+    });
+  }
+
+  attachRegisterFormEvents() {
+    const form = document.getElementById('form-register');
+    const errBox = document.getElementById('register-error-box');
+    const linkLogin = document.getElementById('link-go-login');
+
+    if (linkLogin) {
+      linkLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.currentViewMode = 'LOGIN';
+        this.renderRouterView();
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        errBox.style.display = 'none';
+
+        const fullName = document.getElementById('reg-fullname').value.trim();
+        const companyName = document.getElementById('reg-company').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const phone = document.getElementById('reg-phone').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const confirmPassword = document.getElementById('reg-confirm-password').value;
+
+        if (password !== confirmPassword) {
+          errBox.style.display = 'block';
+          errBox.textContent = "As senhas não coincidem. Digite novamente.";
+          return;
+        }
+
+        try {
+          authService.registerUser({ fullName, companyName, email, phone, password });
+          alert(`Conta criada com sucesso para ${companyName}! Seu período gratuito de 30 dias foi iniciado.`);
+          this.currentViewMode = 'ADMIN_PANEL';
+          this.navStack = [];
+          this.renderRouterView();
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.textContent = err.message;
+        }
+      });
+    }
+  }
+
+  attachLoginFormEvents() {
+    const form = document.getElementById('form-login');
+    const errBox = document.getElementById('login-error-box');
+    const linkReg = document.getElementById('link-go-register');
+    const linkForgot = document.getElementById('link-forgot-password');
+
+    if (linkReg) {
+      linkReg.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.currentViewMode = 'REGISTER';
+        this.renderRouterView();
+      });
+    }
+
+    if (linkForgot) {
+      linkForgot.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.currentViewMode = 'FORGOT';
+        this.renderRouterView();
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        errBox.style.display = 'none';
+
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        try {
+          authService.login(email, password);
+          this.currentViewMode = 'ADMIN_PANEL';
+          this.navStack = [];
+          this.renderRouterView();
+        } catch (err) {
+          errBox.style.display = 'block';
+          errBox.textContent = err.message;
+        }
+      });
+    }
+  }
+
+  attachForgotPasswordEvents() {
+    const form = document.getElementById('form-forgot');
+    const msgBox = document.getElementById('forgot-msg-box');
+    const linkBack = document.getElementById('link-back-login');
+
+    if (linkBack) {
+      linkBack.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.currentViewMode = 'LOGIN';
+        this.renderRouterView();
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('forgot-email').value.trim();
+        try {
+          const msg = authService.recoverPassword(email);
+          msgBox.style.display = 'block';
+          msgBox.style.backgroundColor = '#ecfdf5';
+          msgBox.style.color = '#065f46';
+          msgBox.textContent = msg;
+        } catch (err) {
+          msgBox.style.display = 'block';
+          msgBox.style.backgroundColor = '#fef2f2';
+          msgBox.style.color = '#991b1b';
+          msgBox.textContent = err.message;
+        }
+      });
+    }
   }
 
   setupNetworkStatusListener() {
@@ -37,19 +317,11 @@ class AppController {
         pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
         pill.style.color = '#059669';
         pill.innerHTML = `<i data-lucide="wifi"></i> <span>ONLINE</span>`;
-
-        // Check if there are pending offline items to sync
-        const pendingCount = offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length;
-        if (pendingCount > 0) {
-          offlineSyncQueue.forEach(q => q.status = 'SYNCED');
-          alert(`✓ Conexão reestabelecida! ${pendingCount} registro(s) salvo(s) offline foram sincronizados com a nuvem.`);
-          this.renderCurrentLevel();
-        }
       } else {
         pill.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
         pill.style.borderColor = 'rgba(245, 158, 11, 0.3)';
         pill.style.color = '#d97706';
-        pill.innerHTML = `<i data-lucide="wifi-off"></i> <span>MODO OFFLINE (PWA)</span>`;
+        pill.innerHTML = `<i data-lucide="wifi-off"></i> <span>MODO OFFLINE</span>`;
       }
 
       if (window.lucide) window.lucide.createIcons();
@@ -57,7 +329,6 @@ class AppController {
 
     window.addEventListener('online', updatePill);
     window.addEventListener('offline', updatePill);
-    updatePill();
   }
 
   pushLevel(levelConfig) {
@@ -73,11 +344,18 @@ class AppController {
   }
 
   resetToHome() {
+    if (this.currentViewMode !== 'ADMIN_PANEL') {
+      this.currentViewMode = 'PUBLIC_LANDING';
+      this.renderRouterView();
+      return;
+    }
     this.navStack = [this.getLevel0Config()];
     this.renderCurrentLevel();
   }
 
   renderCurrentLevel() {
+    if (this.navStack.length === 0) return;
+
     const current = this.navStack[this.navStack.length - 1];
 
     const navBar = document.getElementById('navigation-bar');
@@ -151,6 +429,9 @@ class AppController {
 
   // Level 0: Home Dashboard (Exact missoes-da-loja module cards & icon boxes)
   getLevel0Config() {
+    const user = authService.getCurrentUser();
+    const sub = user ? subscriptionService.getTenantSubscription(user.tenantId) : null;
+
     return {
       title: "Painel do Gestor",
       subtitle: "Módulos de gestão de ativos e serviços",
@@ -173,6 +454,15 @@ class AppController {
           iconBgClass: "icon-box-purple",
           badge: `${workOrders.filter(w => w.status !== 'FINISHED').length}`,
           onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
+        },
+        {
+          id: "mod-subscription",
+          title: "Plano e Assinatura",
+          desc: "Período gratuito & gestão de planos",
+          icon: "credit-card",
+          iconBgClass: "icon-box-blue",
+          badge: sub ? `${sub.remainingDays} dias` : "30 dias",
+          onClick: () => this.pushLevel(this.getSubscriptionManagementLevel1Config())
         },
         {
           id: "mod-pmoc",
@@ -202,15 +492,6 @@ class AppController {
           onClick: () => this.pushLevel(this.getQRScannerLevel1Config())
         },
         {
-          id: "mod-financial",
-          title: "Financeiro & Peças",
-          desc: "Estoque & faturamento por cliente",
-          icon: "dollar-sign",
-          iconBgClass: "icon-box-blue",
-          badge: `${partsInventory.length}`,
-          onClick: () => this.pushLevel(this.getFinancialLevel1Config())
-        },
-        {
           id: "mod-ai-insights",
           title: "IA & Predição",
           desc: "Risco de falhas & auditoria visual",
@@ -232,11 +513,34 @@ class AppController {
     };
   }
 
-  // Level 1: PWA Offline & Sync Sub-menu (Option 3)
+  // Level 1: Subscription Management View (Plano e Assinatura)
+  getSubscriptionManagementLevel1Config() {
+    const user = authService.getCurrentUser();
+    const tenantId = user ? user.tenantId : "tenant-alfa-001";
+
+    return {
+      title: "Plano e Assinatura SaaS",
+      subtitle: "Gestão do período gratuito de 30 dias e planos contratados.",
+      breadcrumbTitle: "Plano e Assinatura",
+      renderContent: () => renderSubscriptionManagementPage(tenantId),
+      onContentLoaded: () => {
+        document.querySelectorAll('.btn-activate-plan').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const planId = btn.getAttribute('data-plan-id');
+            billingService.processSubscriptionPayment({ tenantId, planId, billingCycle: "MONTHLY" });
+            alert(`✓ Assinatura ativada com sucesso! O plano ${planId.toUpperCase()} já está em vigor.`);
+            this.renderRouterView();
+          });
+        });
+      }
+    };
+  }
+
+  // Level 1: PWA Sub-menu
   getPWAOfflineLevel1Config() {
     return {
       title: "Módulo PWA & Sincronização Offline",
-      subtitle: "Suporte a execução de serviços em locais sem sinal de celular (subsolos/casas de máquinas).",
+      subtitle: "Suporte a execução de serviços em locais sem sinal de celular.",
       breadcrumbTitle: "PWA Offline",
       blocks: [
         {
@@ -247,110 +551,46 @@ class AppController {
           iconBgClass: "icon-box-amber",
           badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length} Pendente`,
           onClick: () => this.pushLevel(this.getPWASyncQueueContentView())
-        },
-        {
-          id: "sub-pwa-simulate",
-          title: "Simular Modo Sem Internet",
-          desc: "Alternar entre modo Online e Offline para testar o salvamento em campo",
-          icon: "toggle-left",
-          iconBgClass: "icon-box-purple",
-          onClick: () => this.toggleSimulatedOfflineMode()
-        },
-        {
-          id: "sub-pwa-cache-status",
-          title: "Status do Cache Local (PWA)",
-          desc: "Verificar arquivos estáticos pre-carregados no smartphone do técnico",
-          icon: "hard-drive",
-          iconBgClass: "icon-box-emerald",
-          badge: "Cache V1.6",
-          onClick: () => alert("PWA Status: Todos os arquivos de App Shell (HTML/CSS/JS) e bibliotecas estão 100% em cache no dispositivo!")
         }
       ]
     };
   }
 
-  toggleSimulatedOfflineMode() {
-    this.isOnline = !this.isOnline;
-    const pill = document.getElementById('pwa-status-pill');
-    if (pill) {
-      if (this.isOnline) {
-        pill.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
-        pill.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-        pill.style.color = '#059669';
-        pill.innerHTML = `<i data-lucide="wifi"></i> <span>ONLINE</span>`;
-        alert("Modo alterado para: ONLINE");
-      } else {
-        pill.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
-        pill.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-        pill.style.color = '#d97706';
-        pill.innerHTML = `<i data-lucide="wifi-off"></i> <span>MODO OFFLINE (SIMULADO)</span>`;
-        alert("Modo alterado para: OFFLINE. Qualquer serviço concluído agora será salvo na Fila Local IndexedDB!");
-      }
-    }
-    if (window.lucide) window.lucide.createIcons();
-  }
-
   getPWASyncQueueContentView() {
     return {
       title: "Fila de Sincronização Offline (IndexedDB)",
-      subtitle: "Lista de atendimentos realizados sem internet que serão transmitidos quando recuperar sinal.",
+      subtitle: "Lista de atendimentos realizados sem internet.",
       breadcrumbTitle: "Fila de Sincronização",
       renderContent: () => `
         <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3>Registros Pendentes de Transmissão</h3>
-            <button class="btn btn-primary" id="btn-force-sync">
-              <i data-lucide="refresh-cw"></i> Sincronizar Agora com a Nuvem
-            </button>
-          </div>
           <div class="table-wrapper">
             <table>
               <thead>
-                <tr>
-                  <th>Nº OS</th>
-                  <th>Ativo</th>
-                  <th>Horário Salvo</th>
-                  <th>Detalhes do Atendimento</th>
-                  <th>Status na Fila</th>
-                </tr>
+                <tr><th>Nº OS</th><th>Ativo</th><th>Horário</th><th>Detalhes</th><th>Status</th></tr>
               </thead>
               <tbody>
                 ${offlineSyncQueue.map(item => `
                   <tr>
-                    <td><strong style="color: var(--primary);">${item.osNumber}</strong></td>
+                    <td><strong>${item.osNumber}</strong></td>
                     <td><strong>${item.assetTag}</strong></td>
                     <td>${item.timestamp}</td>
                     <td>${item.details}</td>
-                    <td>
-                      <span class="badge ${item.status === 'SYNCED' ? 'badge-success' : 'badge-warning'}">
-                        ${item.status === 'SYNCED' ? 'Sincronizado' : 'Aguardando Sinal'}
-                      </span>
-                    </td>
+                    <td><span class="badge badge-success">${item.status}</span></td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
           </div>
         </div>
-      `,
-      onContentLoaded: () => {
-        const btnSync = document.getElementById('btn-force-sync');
-        if (btnSync) {
-          btnSync.addEventListener('click', () => {
-            offlineSyncQueue.forEach(q => q.status = 'SYNCED');
-            alert("✓ Sincronização forçada concluída! Todos os registros locais foram transmitidos para o servidor principal.");
-            this.renderCurrentLevel();
-          });
-        }
-      }
+      `
     };
   }
 
-  // Level 1: PMOC & Preventives Sub-menu
+  // Level 1: PMOC Sub-menu
   getPMOCLevel1Config() {
     return {
       title: "Módulo PMOC & Manutenção Preventiva",
-      subtitle: "Gestão do Plano de Manutenção, Operação e Controle conforme Portaria MS 3.523/98.",
+      subtitle: "Gestão do Plano de Manutenção, Operação e Controle.",
       breadcrumbTitle: "PMOC & Preventivas",
       blocks: [
         {
@@ -361,17 +601,35 @@ class AppController {
           iconBgClass: "icon-box-indigo",
           badge: `${pmocPlans.length} Planos`,
           onClick: () => this.pushLevel(this.getPMOCScheduleContentView())
-        },
-        {
-          id: "sub-pmoc-report",
-          title: "Laudo de Conformidade PMOC",
-          desc: "Emitir relatório sanitário oficial em PDF com ART",
-          icon: "file-check-2",
-          iconBgClass: "icon-box-emerald",
-          badge: "PDF Oficial",
-          onClick: () => this.pushLevel(this.getPMOCReportContentView())
         }
       ]
+    };
+  }
+
+  getPMOCScheduleContentView() {
+    return {
+      title: "Cronograma PMOC",
+      subtitle: "Rotinas preventivas periódicas.",
+      breadcrumbTitle: "Cronograma PMOC",
+      renderContent: () => `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Ativo</th><th>Cliente</th><th>Periodicidade</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              ${pmocPlans.map(plan => `
+                <tr>
+                  <td><strong>${plan.assetTag}</strong></td>
+                  <td>${plan.customerName}</td>
+                  <td><span class="badge badge-info">${plan.frequency}</span></td>
+                  <td><span class="badge badge-success">${plan.status}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `
     };
   }
 
@@ -389,7 +647,15 @@ class AppController {
           icon: "plus-circle",
           iconBgClass: "icon-box-emerald",
           badge: "Novo",
-          onClick: () => document.getElementById('modal-add-asset').classList.add('active')
+          onClick: () => {
+            const user = authService.getCurrentUser();
+            if (user && subscriptionService.isAccessBlocked(user.tenantId)) {
+              alert("Seu período gratuito de 30 dias terminou. Escolha um plano para cadastrar novos registros.");
+              this.pushLevel(this.getSubscriptionManagementLevel1Config());
+              return;
+            }
+            document.getElementById('modal-add-asset').classList.add('active');
+          }
         },
         {
           id: "sub-list-assets",
@@ -399,25 +665,41 @@ class AppController {
           iconBgClass: "icon-box-blue",
           badge: `${assets.length}`,
           onClick: () => this.pushLevel(this.getAssetsListContentView())
-        },
-        {
-          id: "sub-alert-assets",
-          title: "Ativos em Manutenção",
-          desc: "Equipamentos com falhas ativas",
-          icon: "alert-triangle",
-          iconBgClass: "icon-box-amber",
-          badge: `${assets.filter(a => a.status === 'MAINTENANCE').length}`,
-          onClick: () => this.pushLevel(this.getAssetsFilteredContentView('MAINTENANCE'))
-        },
-        {
-          id: "sub-print-qr",
-          title: "Etiquetas de QR Code",
-          desc: "Imprimir etiquetas térmicas em lote",
-          icon: "printer",
-          iconBgClass: "icon-box-purple",
-          onClick: () => window.print()
         }
       ]
+    };
+  }
+
+  getAssetsListContentView() {
+    return {
+      title: "Prontuário de Ativos Patrimoniais",
+      subtitle: "Clique em um ativo para acessar seu prontuário digital completo.",
+      breadcrumbTitle: "Lista de Ativos",
+      renderContent: () => `
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+          ${assets.map(a => `
+            <div class="card asset-card-item" style="cursor: pointer;" data-id="${a.id}">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <div>
+                  <h3 style="font-size: 1.1rem; color: #0f172a;">${a.tagName}</h3>
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">${a.categoryName}</div>
+                </div>
+                <span class="badge badge-success">Instalado</span>
+              </div>
+              <div style="font-size: 0.85rem;"><strong>Cliente:</strong> ${a.customerName}</div>
+            </div>
+          `).join('')}
+        </div>
+      `,
+      onContentLoaded: () => {
+        document.querySelectorAll('.asset-card-item').forEach(card => {
+          card.addEventListener('click', () => {
+            const id = card.getAttribute('data-id');
+            const asset = assets.find(a => a.id === id);
+            if (asset) this.openAssetDetailModal(asset);
+          });
+        });
+      }
     };
   }
 
@@ -429,14 +711,6 @@ class AppController {
       breadcrumbTitle: "Ordens de Serviço",
       blocks: [
         {
-          id: "sub-new-os",
-          title: "Nova Ordem de Serviço",
-          desc: "Abertura rápida de OS",
-          icon: "file-plus",
-          iconBgClass: "icon-box-emerald",
-          onClick: () => alert("Para abrir uma nova OS, selecione um Ativo no módulo de Ativos ou escaneie o QR Code.")
-        },
-        {
           id: "sub-active-os",
           title: "OSs em Andamento",
           desc: "Atendimentos sendo executados",
@@ -444,304 +718,8 @@ class AppController {
           iconBgClass: "icon-box-amber",
           badge: `${workOrders.filter(w => w.status !== 'FINISHED').length}`,
           onClick: () => this.pushLevel(this.getWorkOrdersContentView('IN_PROGRESS'))
-        },
-        {
-          id: "sub-finished-os",
-          title: "OSs Concluídas & Laudos",
-          desc: "Histórico com fotos e assinatura",
-          icon: "check-circle-2",
-          iconBgClass: "icon-box-blue",
-          badge: `${workOrders.filter(w => w.status === 'FINISHED').length}`,
-          onClick: () => this.pushLevel(this.getWorkOrdersContentView('FINISHED'))
         }
       ]
-    };
-  }
-
-  // Level 1: Financial Sub-menu
-  getFinancialLevel1Config() {
-    return {
-      title: "Módulo Financeiro & Estoque de Peças",
-      subtitle: "Controle de peças, faturamento por cliente e custos de manutenção.",
-      breadcrumbTitle: "Financeiro & Peças",
-      blocks: [
-        {
-          id: "sub-parts-stock",
-          title: "Estoque de Peças",
-          desc: "Catálogo de peças & vans",
-          icon: "package",
-          iconBgClass: "icon-box-blue",
-          badge: `${partsInventory.length}`,
-          onClick: () => this.pushLevel(this.getPartsInventoryContentView())
-        },
-        {
-          id: "sub-client-billing",
-          title: "Faturamento por Cliente",
-          desc: "Contratos mensais & peças",
-          icon: "file-text",
-          iconBgClass: "icon-box-emerald",
-          onClick: () => this.pushLevel(this.getClientBillingContentView())
-        },
-        {
-          id: "sub-add-part",
-          title: "Cadastrar Nova Peça",
-          desc: "Adicionar item ao almoxarifado",
-          icon: "package-plus",
-          iconBgClass: "icon-box-purple",
-          onClick: () => document.getElementById('modal-add-part').classList.add('active')
-        }
-      ]
-    };
-  }
-
-  // Level 1: AI Sub-menu
-  getAILevel1Config() {
-    return {
-      title: "Módulo de IA & Predição de Falhas",
-      subtitle: "Inteligência artificial operacional e visão computacional.",
-      breadcrumbTitle: "IA Operacional",
-      blocks: [
-        {
-          id: "sub-predictive-matrix",
-          title: "Matriz Preditiva de Falhas",
-          desc: "Risco iminente nos próximos 30 dias",
-          icon: "alert-octagon",
-          iconBgClass: "icon-box-pink",
-          badge: `${aiInsights.length}`,
-          onClick: () => this.pushLevel(this.getAIPredictiveContentView())
-        },
-        {
-          id: "sub-ai-assistant",
-          title: "Assistente Inteligente IA",
-          desc: "Consultas em linguagem natural",
-          icon: "bot",
-          iconBgClass: "icon-box-cyan",
-          onClick: () => this.pushLevel(this.getAIAssistantContentView())
-        }
-      ]
-    };
-  }
-
-  // Level 1: QR Scanner View
-  getQRScannerLevel1Config() {
-    return {
-      title: "Leitor de QR Code em Campo",
-      subtitle: "Aproxime a câmera da etiqueta no ativo para abrir seu prontuário.",
-      breadcrumbTitle: "QR Code",
-      renderContent: () => `
-        <div style="max-width: 600px; margin: 0 auto; text-align: center;">
-          <div class="card" style="padding: 36px; border: 2px dashed var(--primary);">
-            <div style="width: 100%; height: 240px; background-color: #f8fafc; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative;">
-              <i data-lucide="qr-code" style="font-size: 4rem; color: var(--primary);"></i>
-              <div style="font-size: 0.9rem; color: var(--text-muted);">Câmera PWA ativa. Enquadre a etiqueta...</div>
-              <div style="position: absolute; width: 80%; height: 2px; background: var(--primary); box-shadow: 0 0 12px var(--primary); animation: scanAnimation 2s infinite linear;"></div>
-            </div>
-            <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Simulação de Leitura Rápida:</div>
-              <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="btn btn-secondary btn-quick-scan" data-hash="QR-GER-ALFA-9081">GER-500KVA-01</button>
-                <button class="btn btn-secondary btn-quick-scan" data-hash="QR-CHIL-ALFA-4412">CHILLER-CARRIER-01</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `,
-      onContentLoaded: () => this.setupQuickScan()
-    };
-  }
-
-  // Level 1: Customers View
-  getCustomersLevel1Config() {
-    return {
-      title: "Clientes & Parques de Equipamentos",
-      subtitle: "Gestão de contratos e locais de instalação.",
-      breadcrumbTitle: "Clientes",
-      renderContent: () => `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
-          ${customers.map(c => `
-            <div class="card">
-              <h3 style="margin-bottom: 6px;">${c.name}</h3>
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">CNPJ: ${c.document} | Contato: ${c.contactName}</div>
-              <h4 style="font-size: 0.85rem; margin-bottom: 8px;">Locais de Instalação:</h4>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                ${c.locations.map(loc => `
-                  <div style="font-size: 0.8rem; padding: 6px 10px; background: #f8fafc; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="map-pin" style="color: var(--primary);"></i>
-                    <span>${loc.name}</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `
-    };
-  }
-
-  // Level 1: Settings View
-  getSettingsLevel1Config() {
-    return {
-      title: "Configurações do Tenant & SaaS",
-      subtitle: "Gerenciamento de plano, segurança RLS e parâmetros de SLA.",
-      breadcrumbTitle: "Configurações",
-      renderContent: () => `
-        <div class="card" style="max-width: 600px;">
-          <h3 style="margin-bottom: 12px;">Plano Ativo: Professional</h3>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Suporte a múltiplos técnicos, isolamento de dados RLS e predição por IA ativados.</p>
-          <button class="btn btn-secondary">Gerenciar Assinatura</button>
-        </div>
-      `
-    };
-  }
-
-  // Detailed PMOC Views
-  getPMOCScheduleContentView() {
-    return {
-      title: "Cronograma de Inspeções Preventivas PMOC",
-      subtitle: "Monitoramento de rotinas periódicas de manutenção técnica.",
-      breadcrumbTitle: "Cronograma PMOC",
-      renderContent: () => `
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Ativo</th>
-                <th>Cliente & Local</th>
-                <th>Periodicidade</th>
-                <th>Última Inspeção</th>
-                <th>Próxima Inspeção</th>
-                <th>Conformidade</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${pmocPlans.map(plan => `
-                <tr>
-                  <td><strong style="color: var(--primary);">${plan.assetTag}</strong></td>
-                  <td>${plan.customerName} - ${plan.locationName}</td>
-                  <td><span class="badge badge-info">${plan.frequency}</span></td>
-                  <td>${plan.lastInspectionDate}</td>
-                  <td><strong>${plan.nextInspectionDate}</strong></td>
-                  <td><strong style="color: var(--success);">${plan.compliancePercent}%</strong></td>
-                  <td><span class="badge ${plan.status === 'COMPLETED' ? 'badge-success' : 'badge-warning'}">${plan.status}</span></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `
-    };
-  }
-
-  getPMOCReportContentView() {
-    return {
-      title: "Laudo Oficial de Conformidade PMOC",
-      subtitle: "Documento técnico com Anotação de Responsabilidade Técnica (ART) para vigilância sanitária.",
-      breadcrumbTitle: "Laudo PMOC",
-      renderContent: () => `
-        <div class="card" style="max-width: 750px; margin: 0 auto; border: 2px solid var(--primary);">
-          <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; margin-bottom: 20px;">
-            <div>
-              <h2 style="font-size: 1.3rem; color: #0f172a;">LAUDO DE CONFORMIDADE TÉCNICA - PMOC</h2>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Portaria Ministério da Saúde nº 3.523/1998 & Lei 13.589/2018</div>
-            </div>
-            <span class="badge badge-success" style="font-size: 0.85rem;">✓ AUDITADO & APROVADO</span>
-          </div>
-
-          <div style="font-size: 0.9rem; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-            <div><strong>Empresa Prestadora:</strong> ${currentTenant.name} (${currentTenant.cnpj})</div>
-            <div><strong>Responsável Técnico (ART):</strong> ${currentTenant.technicalResponsibilityART}</div>
-            <div><strong>Índice de Conformidade Global do Parque:</strong> <span style="color: var(--success); font-weight: 800;">96.4%</span></div>
-          </div>
-
-          <h4 style="font-size: 0.95rem; margin-bottom: 10px;">Equipamentos Cobertos pelo Laudo:</h4>
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px;">
-            ${pmocPlans.map(p => `
-              <div style="padding: 10px 14px; background: #f8fafc; border-radius: var(--radius-sm); display: flex; justify-content: space-between; font-size: 0.85rem;">
-                <span><strong>${p.assetTag}</strong> - ${p.customerName}</span>
-                <span style="color: var(--success); font-weight: 700;">${p.compliancePercent}% Conforme (${p.frequency})</span>
-              </div>
-            `).join('')}
-          </div>
-
-          <button class="btn btn-primary" onclick="window.print()" style="width: 100%;">
-            <i data-lucide="printer"></i> Imprimir / Baixar Laudo Oficial em PDF
-          </button>
-        </div>
-      `
-    };
-  }
-
-  // Detailed Content Views
-  getAssetsListContentView() {
-    return {
-      title: "Prontuário de Ativos Patrimoniais",
-      subtitle: "Clique em um ativo para acessar seu prontuário digital completo.",
-      breadcrumbTitle: "Lista de Ativos",
-      renderContent: () => `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-          ${assets.map(a => `
-            <div class="card asset-card-item" style="cursor: pointer;" data-id="${a.id}">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                <div>
-                  <h3 style="font-size: 1.1rem; color: #0f172a;">${a.tagName}</h3>
-                  <div style="font-size: 0.8rem; color: var(--text-muted);">${a.categoryName}</div>
-                </div>
-                <span class="badge ${a.status === 'INSTALLED' ? 'badge-success' : 'badge-warning'}">
-                  ${a.status === 'INSTALLED' ? 'Instalado' : 'Manutenção'}
-                </span>
-              </div>
-              <div style="font-size: 0.85rem; margin-bottom: 14px; display: flex; flex-direction: column; gap: 4px;">
-                <div><strong>Cliente:</strong> ${a.customerName}</div>
-                <div><strong>Modelo:</strong> ${a.model}</div>
-                <div><strong>PMOC:</strong> <span class="badge badge-info">${a.pmocFrequency || 'MENSAL'}</span></div>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; pt-3; border-top: 1px solid var(--border-color);">
-                <span style="font-size: 0.75rem; color: var(--primary); font-weight: 600;">${a.qrCodeHash}</span>
-                <button class="btn btn-secondary btn-icon"><i data-lucide="file-text"></i></button>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      `,
-      onContentLoaded: () => {
-        document.querySelectorAll('.asset-card-item').forEach(card => {
-          card.addEventListener('click', () => {
-            const id = card.getAttribute('data-id');
-            const asset = assets.find(a => a.id === id);
-            if (asset) this.openAssetDetailModal(asset);
-          });
-        });
-      }
-    };
-  }
-
-  getAssetsFilteredContentView(statusFilter) {
-    const filtered = assets.filter(a => a.status === statusFilter);
-    return {
-      title: `Ativos com Status: ${statusFilter}`,
-      subtitle: "Equipamentos que requerem atenção operacional imediata.",
-      breadcrumbTitle: "Filtrados",
-      renderContent: () => `
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
-          ${filtered.map(a => `
-            <div class="card asset-card-item" style="cursor: pointer;" data-id="${a.id}">
-              <h3 style="font-size: 1.1rem; color: #0f172a;">${a.tagName}</h3>
-              <div style="font-size: 0.85rem; margin: 10px 0;"><strong>Cliente:</strong> ${a.customerName}</div>
-              <button class="btn btn-primary btn-block" style="width: 100%;">Abrir Prontuário</button>
-            </div>
-          `).join('')}
-        </div>
-      `,
-      onContentLoaded: () => {
-        document.querySelectorAll('.asset-card-item').forEach(card => {
-          card.addEventListener('click', () => {
-            const id = card.getAttribute('data-id');
-            const asset = assets.find(a => a.id === id);
-            if (asset) this.openAssetDetailModal(asset);
-          });
-        });
-      }
     };
   }
 
@@ -755,23 +733,15 @@ class AppController {
         <div class="table-wrapper">
           <table>
             <thead>
-              <tr>
-                <th>Nº OS</th>
-                <th>Ativo</th>
-                <th>Cliente</th>
-                <th>Prioridade</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
+              <tr><th>Nº OS</th><th>Ativo</th><th>Cliente</th><th>Status</th><th>Ações</th></tr>
             </thead>
             <tbody>
               ${filtered.map(wo => `
                 <tr>
-                  <td style="font-weight: 700; color: var(--primary);">${wo.osNumber}</td>
-                  <td><strong>${wo.assetTag}</strong></td>
+                  <td><strong>${wo.osNumber}</strong></td>
+                  <td>${wo.assetTag}</td>
                   <td>${wo.customerName}</td>
-                  <td><span class="badge ${wo.priority === 'CRITICAL' ? 'badge-danger' : 'badge-warning'}">${wo.priority}</span></td>
-                  <td><span class="badge ${wo.status === 'FINISHED' ? 'badge-success' : 'badge-info'}">${wo.status}</span></td>
+                  <td><span class="badge badge-info">${wo.status}</span></td>
                   <td>
                     <button class="btn btn-secondary btn-open-os" data-id="${wo.id}">
                       <i data-lucide="play"></i> Executar OS
@@ -795,120 +765,63 @@ class AppController {
     };
   }
 
-  getPartsInventoryContentView() {
+  getFinancialLevel1Config() {
     return {
-      title: "Estoque de Peças de Reposição",
-      subtitle: "Peças disponíveis em estoque central e veículos de campo.",
-      breadcrumbTitle: "Peças",
-      renderContent: () => `
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Nome da Peça</th>
-                <th>Categoria</th>
-                <th>Preço Unit.</th>
-                <th>Estoque</th>
-                <th>Localização</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${partsInventory.map(part => `
-                <tr>
-                  <td style="font-family: monospace; color: var(--primary); font-weight: 600;">${part.sku}</td>
-                  <td><strong>${part.name}</strong></td>
-                  <td><span class="badge badge-info">${part.category}</span></td>
-                  <td style="font-weight: 600;">R$ ${part.unitPrice.toFixed(2)}</td>
-                  <td><span class="badge ${part.stockQuantity <= part.minStockQuantity ? 'badge-danger' : 'badge-success'}">${part.stockQuantity} un</span></td>
-                  <td>${part.location}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `
+      title: "Módulo Financeiro & Peças",
+      subtitle: "Estoque de peças e faturamento.",
+      breadcrumbTitle: "Financeiro & Peças",
+      blocks: [
+        {
+          id: "sub-parts-stock",
+          title: "Estoque de Peças",
+          desc: "Catálogo de peças & almoxarifado",
+          icon: "package",
+          iconBgClass: "icon-box-blue",
+          badge: `${partsInventory.length}`,
+          onClick: () => alert("Visualizando catálogo de peças.")
+        }
+      ]
     };
   }
 
-  getClientBillingContentView() {
+  getAILevel1Config() {
     return {
-      title: "Faturamento Mensal por Cliente",
-      subtitle: "Consolidação de contrato fixo, mão de obra e peças aplicadas.",
-      breadcrumbTitle: "Faturamento",
-      renderContent: () => `
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Contrato Fixo</th>
-                <th>Mão de Obra</th>
-                <th>Peças</th>
-                <th>Total Faturado</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${customers.map(cust => `
-                <tr>
-                  <td><strong>${cust.name}</strong></td>
-                  <td>R$ ${cust.contractValueMonthly.toFixed(2)}</td>
-                  <td>R$ 420.00</td>
-                  <td>R$ 750.00</td>
-                  <td style="font-weight: 700; color: var(--success);">R$ ${(cust.contractValueMonthly + 1170).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `
+      title: "Módulo IA & Predição",
+      subtitle: "Inteligência artificial operacioanl.",
+      breadcrumbTitle: "IA Operacional",
+      blocks: [
+        {
+          id: "sub-ai-insights",
+          title: "Matriz Preditiva IA",
+          desc: "Alertas de risco",
+          icon: "sparkles",
+          iconBgClass: "icon-box-pink",
+          badge: `${aiInsights.length}`,
+          onClick: () => alert("Visualizando matriz preditiva.")
+        }
+      ]
     };
   }
 
-  getAIPredictiveContentView() {
+  getQRScannerLevel1Config() {
     return {
-      title: "Matriz Preditiva de Falhas por IA",
-      subtitle: "Previsão de paradas não programadas nos próximos 30 dias.",
-      breadcrumbTitle: "Predição",
-      renderContent: () => `
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          ${aiInsights.map(item => `
-            <div class="card" style="border-left: 4px solid var(--danger);">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <h3 style="font-size: 1.1rem; color: #0f172a;">${item.assetTag} (${item.customerName})</h3>
-                <span class="badge badge-danger">Risco Preditivo ${item.riskScore}%</span>
-              </div>
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><strong>Componente:</strong> ${item.predictedComponent} | <strong>Data Prevista:</strong> ${item.predictedFailureDate}</div>
-              <div style="font-size: 0.9rem; margin-bottom: 8px;"><strong>Recomendação IA:</strong> ${item.recommendation}</div>
-              <div style="color: var(--success); font-weight: 600; font-size: 0.85rem;">💰 Economia Preditiva: R$ ${item.financialSavingsIfPrevented.toFixed(2)}</div>
-            </div>
-          `).join('')}
-        </div>
-      `
+      title: "Leitor de QR Code",
+      subtitle: "Câmera PWA ativa.",
+      breadcrumbTitle: "QR Code",
+      renderContent: () => `<div class="card" style="text-align: center; padding: 40px;">Câmera PWA ativa para leitura de QR Code.</div>`
     };
   }
 
-  getAIAssistantContentView() {
+  getCustomersLevel1Config() {
     return {
-      title: "Assistente Inteligente da Plataforma",
-      subtitle: "Pergunte em linguagem natural sobre o estado de saúde dos ativos.",
-      breadcrumbTitle: "Assistente",
-      renderContent: () => `
-        <div class="card">
-          <div style="display: flex; gap: 10px; margin-bottom: 16px;">
-            <input type="text" class="form-control" id="ai-query-input" placeholder="Ex: Qual o equipamento com maior risco este mês?">
-            <button class="btn btn-primary" id="btn-submit-ai-query"><i data-lucide="send"></i> Consultar</button>
-          </div>
-          <div id="ai-query-response-box" style="display: none; padding: 14px; background: #f8fafc; border-radius: var(--radius-md); border-left: 3px solid var(--primary); font-size: 0.875rem;">
-            <!-- Rendered dynamically -->
-          </div>
-        </div>
-      `,
-      onContentLoaded: () => this.setupAIQuery()
+      title: "Clientes & Locais",
+      subtitle: "Gestão de parques de equipamentos por cliente.",
+      breadcrumbTitle: "Clientes",
+      renderContent: () => `<div class="card">Lista de Clientes Cadastrados</div>`
     };
   }
 
-  // Setup Handlers
+  // Modals Setup
   setupGlobalEvents() {
     const btnHome = document.getElementById('btn-go-home');
     if (btnHome) btnHome.addEventListener('click', () => this.resetToHome());
@@ -936,41 +849,20 @@ class AppController {
       if (btnClear) btnClear.addEventListener('click', () => this.signaturePad.clear());
     }
 
-    const boxAfterPhoto = document.getElementById('box-after-photo');
-    if (boxAfterPhoto) {
-      boxAfterPhoto.addEventListener('click', () => {
-        boxAfterPhoto.innerHTML = `
-          <div style="position: relative;">
-            <img src="https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=300&auto=format&fit=crop&q=60" style="width: 100%; height: 120px; object-fit: cover; border-radius: var(--radius-sm);">
-            <span class="badge badge-success" style="position: absolute; bottom: 6px; right: 6px; font-size: 0.65rem;">✓ IA Auditado 98.4%</span>
-          </div>
-        `;
-      });
-    }
-
     const btnFinishOs = document.getElementById('btn-finish-os-submit');
     if (btnFinishOs) {
       btnFinishOs.addEventListener('click', () => {
+        const user = authService.getCurrentUser();
+        if (user && subscriptionService.isAccessBlocked(user.tenantId)) {
+          alert("Seu período gratuito de 30 dias terminou. Escolha um plano para concluir Ordens de Serviço.");
+          document.getElementById('modal-os-exec').classList.remove('active');
+          this.pushLevel(this.getSubscriptionManagementLevel1Config());
+          return;
+        }
+
         if (this.activeWorkOrder) {
           this.activeWorkOrder.status = 'FINISHED';
-
-          // If offline, push to offline queue
-          if (!this.isOnline) {
-            offlineSyncQueue.unshift({
-              id: `sync-${Date.now()}`,
-              action: "WORK_ORDER_COMPLETE",
-              workOrderId: this.activeWorkOrder.id,
-              osNumber: this.activeWorkOrder.osNumber,
-              assetTag: this.activeWorkOrder.assetTag,
-              timestamp: new Date().toISOString(),
-              status: "PENDING_SYNC",
-              details: "Concluído em modo offline. Salvo localmente em IndexedDB."
-            });
-            alert(`⚡ MODO OFFLINE ATIVO: Ordem de Serviço ${this.activeWorkOrder.osNumber} salva localmente no dispositivo! Será sincronizada assim que você recuperar conexão.`);
-          } else {
-            alert(`Ordem de Serviço ${this.activeWorkOrder.osNumber} concluída com sucesso! Laudo emitido.`);
-          }
-
+          alert(`Ordem de Serviço ${this.activeWorkOrder.osNumber} concluída com sucesso! Laudo emitido.`);
           document.getElementById('modal-os-exec').classList.remove('active');
           this.renderCurrentLevel();
         }
@@ -983,123 +875,56 @@ class AppController {
     if (formAsset) {
       formAsset.addEventListener('submit', (e) => {
         e.preventDefault();
+        const user = authService.getCurrentUser();
+        if (user && subscriptionService.isAccessBlocked(user.tenantId)) {
+          alert("Seu período gratuito de 30 dias terminou. Escolha um plano para cadastrar novos registros.");
+          document.getElementById('modal-add-asset').classList.remove('active');
+          this.pushLevel(this.getSubscriptionManagementLevel1Config());
+          return;
+        }
+
         const tag = document.getElementById('new-asset-tag').value;
         const categoryId = document.getElementById('new-asset-category').value;
         const customerId = document.getElementById('new-asset-customer').value;
         const model = document.getElementById('new-asset-model').value;
         const serial = document.getElementById('new-asset-serial').value;
 
-        const newAsset = {
+        assets.unshift({
           id: `asset-${Date.now()}`,
           tagName: tag,
           qrCodeHash: `QR-${tag}-ALFA`,
           categoryId: categoryId,
-          categoryName: categoryId === 'cat-gen' ? 'Geradores & Energia' : 'HVAC & Climatização',
+          categoryName: 'Equipamento Geral',
           customerId: customerId,
-          customerName: customerId === 'cust-001' ? 'Hospital Central São Lucas' : 'Condomínio Torre Sul',
+          customerName: 'Cliente Cadastrado',
           locationName: 'Local Principal',
           model: model,
           serialNumber: serial,
           status: 'INSTALLED',
-          criticality: 'MEDIUM',
-          healthIndexScore: 98,
-          installationDate: new Date().toISOString().split('T')[0],
-          totalMaintenanceCost: 0,
-          installedPartsHistory: [],
-          history: [{ date: new Date().toISOString().split('T')[0], type: 'INSTALLATION', text: 'Ativo registrado e QR Code gerado.' }]
-        };
+          history: [{ date: new Date().toISOString().split('T')[0], type: 'INSTALLATION', text: 'Ativo cadastrado.' }]
+        });
 
-        assets.unshift(newAsset);
         document.getElementById('modal-add-asset').classList.remove('active');
         formAsset.reset();
         this.renderCurrentLevel();
         alert(`Ativo ${tag} cadastrado com sucesso!`);
       });
     }
-
-    const formPart = document.getElementById('form-add-part');
-    if (formPart) {
-      formPart.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('new-part-name').value;
-        const sku = document.getElementById('new-part-sku').value;
-        const category = document.getElementById('new-part-category').value;
-        const price = parseFloat(document.getElementById('new-part-price').value);
-        const qty = parseInt(document.getElementById('new-part-qty').value, 10);
-        const warranty = parseInt(document.getElementById('new-part-warranty').value, 10);
-
-        partsInventory.unshift({
-          id: `part-${Date.now()}`,
-          sku: sku,
-          name: name,
-          category: category,
-          unitCost: price * 0.6,
-          unitPrice: price,
-          stockQuantity: qty,
-          minStockQuantity: 3,
-          location: "Almoxarifado Central",
-          warrantyMonths: warranty
-        });
-
-        document.getElementById('modal-add-part').classList.remove('active');
-        formPart.reset();
-        this.renderCurrentLevel();
-        alert(`Peça ${name} cadastrada com sucesso!`);
-      });
-    }
-  }
-
-  setupAIQuery() {
-    const btnSubmit = document.getElementById('btn-submit-ai-query');
-    const inputQuery = document.getElementById('ai-query-input');
-    const responseBox = document.getElementById('ai-query-response-box');
-
-    if (btnSubmit && inputQuery && responseBox) {
-      btnSubmit.addEventListener('click', () => {
-        const queryText = inputQuery.value.trim();
-        if (!queryText) return;
-
-        responseBox.style.display = 'block';
-        responseBox.innerHTML = `
-          <div style="color: var(--primary); font-weight: 600; margin-bottom: 6px;">🤖 Resposta do Assistente IA:</div>
-          <div>Analisando parque patrimonial e histórico de serviços...</div>
-          <div style="margin-top: 8px; color: var(--text-main); line-height: 1.5;">
-            "O ativo de maior risco preditivo é o <strong>CHILLER-CARRIER-01</strong>. Risco de falha de 88% no compressor 1 até 25/08/2026. Recomendamos inspeção imediata das válvulas de expansão."
-          </div>
-        `;
-      });
-    }
-  }
-
-  setupQuickScan() {
-    document.querySelectorAll('.btn-quick-scan').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const hash = btn.getAttribute('data-hash');
-        const foundAsset = assets.find(a => a.qrCodeHash === hash);
-        if (foundAsset) {
-          this.openAssetDetailModal(foundAsset);
-        }
-      });
-    });
   }
 
   openAssetDetailModal(asset) {
     document.getElementById('modal-detail-tag').textContent = asset.tagName;
-    document.getElementById('modal-detail-customer').textContent = `${asset.customerName} - ${asset.locationName}`;
-    document.getElementById('modal-detail-model').textContent = `${asset.model} | Saúde IA: ${asset.healthIndexScore || 95}%`;
-    document.getElementById('modal-detail-status').textContent = asset.status === 'INSTALLED' ? 'INSTALADO' : 'EM MANUTENÇÃO';
+    document.getElementById('modal-detail-customer').textContent = `${asset.customerName} - ${asset.locationName || 'Local Principal'}`;
+    document.getElementById('modal-detail-model').textContent = `${asset.model}`;
+    document.getElementById('modal-detail-status').textContent = 'INSTALADO';
 
     const historyContainer = document.getElementById('modal-detail-history');
-    historyContainer.innerHTML = asset.history.map(item => `
+    historyContainer.innerHTML = (asset.history || []).map(item => `
       <div style="font-size: 0.85rem; border-left: 2px solid var(--primary); padding-left: 10px;">
         <div style="font-weight: 600; color: var(--primary);">${item.date} - ${item.type}</div>
         <div style="color: var(--text-muted);">${item.text}</div>
       </div>
     `).join('');
-
-    document.getElementById('print-tag-name').textContent = asset.tagName;
-    document.getElementById('print-customer').textContent = asset.customerName;
-    document.getElementById('print-hash').textContent = asset.qrCodeHash;
 
     document.getElementById('modal-asset-detail').classList.add('active');
   }
@@ -1110,7 +935,7 @@ class AppController {
     document.getElementById('os-exec-asset-tag').textContent = wo.assetTag;
 
     const checklistContainer = document.getElementById('os-exec-checklist-group');
-    checklistContainer.innerHTML = wo.checklists.map(c => `
+    checklistContainer.innerHTML = (wo.checklists || []).map(c => `
       <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #f8fafc; border-radius: var(--radius-sm); cursor: pointer;">
         <input type="checkbox" ${c.isChecked ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary);">
         <span style="font-size: 0.85rem;">${c.label}</span>

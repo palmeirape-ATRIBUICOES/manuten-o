@@ -75,6 +75,30 @@ button, input, select, textarea {
   min-height: 100vh;
 }
 
+/* Trial Banner Top Bar */
+.trial-banner {
+  background-color: #eff6ff;
+  border-bottom: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 60;
+}
+
+.trial-banner .btn-trial-action {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  background-color: #1e40af;
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+}
+
 /* Header Topbar - Clean White Style */
 .topbar {
   height: 76px;
@@ -204,7 +228,7 @@ button, input, select, textarea {
   font-weight: 700;
 }
 
-/* Top Summary KPI Cards (Matching missoes-da-loja top row) */
+/* Top Summary KPI Cards */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -285,7 +309,7 @@ button, input, select, textarea {
   border-color: #cbd5e1;
 }
 
-/* Vibrant Squircle Icon Container (Exact match missoes-da-loja) */
+/* Vibrant Squircle Icon Container */
 .block-icon-box {
   width: 58px;
   height: 58px;
@@ -323,7 +347,7 @@ button, input, select, textarea {
   margin-top: -6px;
 }
 
-/* Red Notification Pill (Exact top-right red circle from screenshot) */
+/* Red Notification Pill */
 .notification-badge {
   position: absolute;
   top: 12px;
@@ -340,6 +364,154 @@ button, input, select, textarea {
   justify-content: center;
   padding: 0 6px;
   box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+}
+
+/* Public Landing Page & Auth Styles */
+.public-landing-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.hero-section {
+  text-align: center;
+  padding: 48px 20px 40px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #065f46;
+  margin-bottom: 20px;
+}
+
+.hero-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+  line-height: 1.15;
+}
+
+.hero-description {
+  font-size: 1.1rem;
+  color: #475569;
+  max-width: 750px;
+  margin: 0 auto 32px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.btn-hero-primary {
+  padding: 14px 28px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #ffffff;
+  border-radius: var(--radius-md);
+  border: none;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+  cursor: pointer;
+}
+
+.btn-hero-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(99, 102, 241, 0.45);
+}
+
+.btn-hero-secondary {
+  padding: 14px 28px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.hero-guarantee {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  flex-wrap: wrap;
+}
+
+.auth-card-wrapper {
+  max-width: 480px;
+  margin: 40px auto;
+}
+
+.auth-card {
+  padding: 36px 32px;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+/* Plan Cards */
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.plan-card-popular {
+  border: 2px solid var(--primary);
+  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.15);
+}
+
+.popular-tag {
+  position: absolute;
+  top: -12px;
+  right: 20px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.plan-features-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.plan-features-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+}
+
+.public-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 28px 0;
+  margin-top: 40px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 /* White Standard Cards & Tables */
@@ -461,10 +633,3 @@ tr:hover td { background-color: #f8fafc; }
 .badge-warning { background-color: #fef3c7; color: #92400e; }
 .badge-danger  { background-color: #fee2e2; color: #991b1b; }
 .badge-info    { background-color: #dbeafe; color: #1e40af; }
-
-/* Thermal Label Print */
-@media print {
-  body * { visibility: hidden; }
-  .printable-label, .printable-label * { visibility: visible; }
-  .printable-label { position: absolute; left: 0; top: 0; width: 80mm; padding: 10mm; background: #fff !important; color: #000 !important; border: 2px solid #000; text-align: center; }
-}

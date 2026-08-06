@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SaaS Asset Management - Painel do Gestor (PWA Offline Ready)</title>
+  <title>SaaS Asset Management - Gestão do Ciclo de Vida do Ativo Patrimonial</title>
   
   <!-- PWA Manifest & Web Icons -->
   <link rel="manifest" href="manifest.json">
@@ -17,89 +17,87 @@
 <body>
 
   <div id="app">
-    <!-- Topbar Header (Exact Match missoes-da-loja screenshot + PWA Offline Indicator) -->
+    <!-- Top Trial Notification Banner (Rendered dynamically when logged in during trial) -->
+    <div id="trial-banner-container"></div>
+
+    <!-- Topbar Header -->
     <header class="topbar">
       <div class="brand-container" id="btn-go-home" title="Ir para a Tela Inicial">
         <div class="brand-icon">
           <i data-lucide="target"></i>
         </div>
         <div>
-          <div class="brand-title">Painel do Gestor</div>
-          <div style="font-size: 0.8rem; color: var(--text-muted);">Alfa Climatização • Semana 2026-W32</div>
+          <div class="brand-title">SaaS Asset Management</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);" id="header-company-name">Plataforma de Manutenção & Ativos</div>
         </div>
       </div>
 
-      <div class="topbar-right">
-        <!-- PWA Connectivity Status Pill -->
-        <div class="tenant-pill" id="pwa-status-pill" style="background-color: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #059669;">
-          <i data-lucide="wifi"></i>
-          <span>ONLINE</span>
-        </div>
-
-        <div class="user-role-badge">
-          <span>👑 GESTOR</span>
-          <span style="color: #92400e;">06/08/2026</span>
-        </div>
-
-        <button class="btn btn-secondary" style="padding: 6px 16px; font-size: 0.85rem;" onclick="location.reload()">
-          Sair
-        </button>
+      <div class="topbar-right" id="header-topbar-right">
+        <!-- Rendered dynamically by app.js (Login / Reg / Tenant Status / Logout) -->
       </div>
     </header>
 
     <!-- Main Container -->
     <main class="main-container">
       
-      <!-- Top Row Summary KPI Cards -->
-      <div class="kpi-row" id="kpi-summary-row">
-        <div class="kpi-card">
-          <div class="kpi-label">FATURAMENTO HOJE</div>
-          <div class="kpi-value">0</div>
-          <div class="kpi-sub">R$ 10.140,00 (Mês)</div>
+      <!-- Public View Container (Landing Page, Register, Login) -->
+      <div id="public-view-container"></div>
+
+      <!-- Private View Container (Admin Dashboard) -->
+      <div id="private-view-container" style="display: none;">
+        
+        <!-- Top Row Summary KPI Cards -->
+        <div class="kpi-row" id="kpi-summary-row">
+          <div class="kpi-card">
+            <div class="kpi-label">FATURAMENTO MÊS</div>
+            <div class="kpi-value" style="color: #10b981;">R$ 10.140</div>
+            <div class="kpi-sub">Contratos + Peças</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">ATIVOS MONITORADOS</div>
+            <div class="kpi-value" style="color: #6366f1;">142</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">100% com QR Code</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">EQUIPE EM CAMPO</div>
+            <div class="kpi-value">8</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">técnicos ativos</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">ASSINATURA SAAS</div>
+            <div class="kpi-value" style="color: #3b82f6;" id="kpi-sub-days">30 dias</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);" id="kpi-sub-status">período gratuito</div>
+          </div>
         </div>
 
-        <div class="kpi-card">
-          <div class="kpi-label">ATIVOS MONITORADOS</div>
-          <div class="kpi-value" style="color: #6366f1;">142</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">100% com QR Code</div>
+        <!-- Navigation & Breadcrumb Bar -->
+        <div class="navigation-bar" id="navigation-bar" style="display: none;">
+          <button class="btn-back" id="btn-nav-back">
+            <i data-lucide="arrow-left"></i>
+            <span>Voltar ao Nível Anterior</span>
+          </button>
+
+          <div class="breadcrumbs" id="breadcrumb-trail">
+            <span class="active">Painel Principal</span>
+          </div>
         </div>
 
-        <div class="kpi-card">
-          <div class="kpi-label">EQUIPE EM CAMPO</div>
-          <div class="kpi-value">8</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">técnicos ativos</div>
+        <!-- Section Title: MÓDULOS -->
+        <div class="section-heading" id="section-heading">MÓDULOS</div>
+
+        <!-- Dynamic Block Grid Container -->
+        <div class="block-grid" id="block-grid-container">
+          <!-- Rendered dynamically by app.js -->
         </div>
 
-        <div class="kpi-card">
-          <div class="kpi-label">STATUS PWA CAMPO</div>
-          <div class="kpi-value" style="color: #10b981;">OFFLINE</div>
-          <div style="font-size: 0.85rem; color: var(--text-muted);">pronto para subsolos</div>
+        <!-- Detailed View Container -->
+        <div id="content-view-container" style="display: none;">
+          <!-- Rendered dynamically based on selected block -->
         </div>
-      </div>
 
-      <!-- Navigation & Breadcrumb Bar -->
-      <div class="navigation-bar" id="navigation-bar" style="display: none;">
-        <button class="btn-back" id="btn-nav-back">
-          <i data-lucide="arrow-left"></i>
-          <span>Voltar ao Nível Anterior</span>
-        </button>
-
-        <div class="breadcrumbs" id="breadcrumb-trail">
-          <span class="active">Painel Principal</span>
-        </div>
-      </div>
-
-      <!-- Section Title: MÓDULOS -->
-      <div class="section-heading" id="section-heading">MÓDULOS</div>
-
-      <!-- 1. Dynamic Block Grid Container (Level Navigation Modules) -->
-      <div class="block-grid" id="block-grid-container">
-        <!-- Rendered dynamically by app.js -->
-      </div>
-
-      <!-- 2. Detailed View Container (For Lists, Scanners, Forms, Tables) -->
-      <div id="content-view-container" style="display: none;">
-        <!-- Rendered dynamically based on selected block -->
       </div>
 
     </main>
