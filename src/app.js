@@ -1,5 +1,5 @@
 /* ==========================================================================
-   APP MAIN CONTROLLER - BLOCK-BASED LEVEL NAVIGATION (MISSOES-DA-LOJA STYLE)
+   APP MAIN CONTROLLER - EXACT MATCH MISSOES-DA-LOJA BLOCK UI & COLORS
    ========================================================================== */
 
 import { currentTenant, assetCategories, customers, assets, workOrders, partsInventory, aiInsights } from './mock-data.js';
@@ -44,22 +44,29 @@ class AppController {
   renderCurrentLevel() {
     const current = this.navStack[this.navStack.length - 1];
 
+    const navBar = document.getElementById('navigation-bar');
+    const kpiRow = document.getElementById('kpi-summary-row');
+    const sectionHeading = document.getElementById('section-heading');
     const btnBack = document.getElementById('btn-nav-back');
     const breadcrumbTrail = document.getElementById('breadcrumb-trail');
 
+    // Toggle navigation bar visibility based on level depth
     if (this.navStack.length > 1) {
+      navBar.style.display = 'flex';
       btnBack.style.display = 'inline-flex';
+      kpiRow.style.display = 'none';
+      sectionHeading.textContent = current.title.toUpperCase();
     } else {
+      navBar.style.display = 'none';
       btnBack.style.display = 'none';
+      kpiRow.style.display = 'grid';
+      sectionHeading.textContent = "MÓDULOS";
     }
 
     breadcrumbTrail.innerHTML = this.navStack.map((item, index) => {
       const isLast = index === this.navStack.length - 1;
       return `<span class="${isLast ? 'active' : ''}">${item.breadcrumbTitle || item.title}</span>`;
     }).join(' <span style="color: var(--text-muted);">/</span> ');
-
-    document.getElementById('level-title').textContent = current.title;
-    document.getElementById('level-subtitle').textContent = current.subtitle;
 
     const blockGridContainer = document.getElementById('block-grid-container');
     const contentViewContainer = document.getElementById('content-view-container');
@@ -72,13 +79,13 @@ class AppController {
       const displayBlocks = current.blocks.slice(0, 8);
 
       blockGridContainer.innerHTML = displayBlocks.map(block => `
-        <div class="block-card" data-block-id="${block.id}" data-color="${block.color || 'blue'}">
-          <div class="block-icon">
+        <div class="block-card" data-block-id="${block.id}">
+          ${block.badge ? `<div class="notification-badge">${block.badge}</div>` : ''}
+          <div class="block-icon-box ${block.iconBgClass || 'icon-box-emerald'}">
             <i data-lucide="${block.icon}"></i>
           </div>
-          <div class="block-title">${block.title}</div>
-          <div class="block-desc">${block.desc}</div>
-          ${block.badge ? `<span class="badge ${block.badgeClass || 'badge-info'} block-badge">${block.badge}</span>` : ''}
+          <div class="block-card-title">${block.title}</div>
+          ${block.desc ? `<div class="block-card-desc">${block.desc}</div>` : ''}
         </div>
       `).join('');
 
@@ -107,81 +114,73 @@ class AppController {
     }
   }
 
-  // Level 0: Home Dashboard (Exact Palette Match missoes-da-loja)
+  // Level 0: Home Dashboard (Exact missoes-da-loja module cards & icon boxes)
   getLevel0Config() {
     return {
-      title: "Painel de Módulos Operacionais",
-      subtitle: "Selecione o bloco correspondente ao módulo desejado.",
+      title: "Painel do Gestor",
+      subtitle: "Módulos de gestão de ativos e serviços",
       breadcrumbTitle: "Painel Principal",
       blocks: [
         {
           id: "mod-assets",
           title: "Ativos Patrimoniais",
-          desc: "Gestão do ciclo de vida, prontuário técnico e QR Codes.",
+          desc: "Gestão do ciclo de vida & QR Code",
           icon: "box",
-          color: "blue",
-          badge: `${assets.length} Ativos`,
-          badgeClass: "badge-info",
+          iconBgClass: "icon-box-teal",
+          badge: `${assets.length}`,
           onClick: () => this.pushLevel(this.getAssetsLevel1Config())
         },
         {
           id: "mod-work-orders",
           title: "Ordens de Serviço",
-          desc: "Manutenções preventivas, corretivas, checklists e evidências.",
+          desc: "Preventiva, corretiva & checklists",
           icon: "wrench",
-          color: "amber",
-          badge: `${workOrders.filter(w => w.status !== 'FINISHED').length} Ativas`,
-          badgeClass: "badge-warning",
+          iconBgClass: "icon-box-purple",
+          badge: `${workOrders.filter(w => w.status !== 'FINISHED').length}`,
           onClick: () => this.pushLevel(this.getWorkOrdersLevel1Config())
         },
         {
           id: "mod-qr-scanner",
-          title: "Leitor de QR Code",
-          desc: "Escaneamento de etiqueta física em campo via câmera.",
+          title: "Leitor QR Code",
+          desc: "Escaneamento de ativos em campo",
           icon: "qr-code",
-          color: "emerald",
-          badge: "PWA Campo",
-          badgeClass: "badge-success",
+          iconBgClass: "icon-box-emerald",
+          badge: "PWA",
           onClick: () => this.pushLevel(this.getQRScannerLevel1Config())
         },
         {
           id: "mod-financial",
           title: "Financeiro & Peças",
-          desc: "Estoque de peças, faturamento por cliente e garantias.",
+          desc: "Estoque & faturamento por cliente",
           icon: "dollar-sign",
-          color: "purple",
-          badge: "Faturamento",
-          badgeClass: "badge-success",
+          iconBgClass: "icon-box-blue",
+          badge: `${partsInventory.length}`,
           onClick: () => this.pushLevel(this.getFinancialLevel1Config())
         },
         {
           id: "mod-ai-insights",
           title: "IA & Predição",
-          desc: "Análise preditiva de risco de falhas e auditoria por visão.",
+          desc: "Risco de falhas & auditoria visual",
           icon: "sparkles",
-          color: "pink",
-          badge: "IA Active",
-          badgeClass: "badge-info",
+          iconBgClass: "icon-box-pink",
+          badge: `${aiInsights.length}`,
           onClick: () => this.pushLevel(this.getAILevel1Config())
         },
         {
           id: "mod-customers",
           title: "Clientes & Locais",
-          desc: "Cadastro de clientes, filiais e parques de equipamentos.",
+          desc: "Parques de equipamentos por cliente",
           icon: "building-2",
-          color: "cyan",
-          badge: `${customers.length} Clientes`,
-          badgeClass: "badge-info",
+          iconBgClass: "icon-box-orange",
+          badge: `${customers.length}`,
           onClick: () => this.pushLevel(this.getCustomersLevel1Config())
         },
         {
           id: "mod-settings",
           title: "Configurações",
-          desc: "Plano SaaS, permissões RBAC e regras de SLA.",
+          desc: "Plano SaaS, RLS & regras SLA",
           icon: "settings",
-          color: "blue",
-          badge: "Professional",
-          badgeClass: "badge-info",
+          iconBgClass: "icon-box-dark",
           onClick: () => this.pushLevel(this.getSettingsLevel1Config())
         }
       ]
@@ -198,37 +197,36 @@ class AppController {
         {
           id: "sub-add-asset",
           title: "Cadastrar Novo Ativo",
-          desc: "Registrar equipamento, categoria, cliente e gerar QR Code.",
+          desc: "Registrar equipamento & QR Code",
           icon: "plus-circle",
-          color: "emerald",
+          iconBgClass: "icon-box-emerald",
           badge: "Novo",
           onClick: () => document.getElementById('modal-add-asset').classList.add('active')
         },
         {
           id: "sub-list-assets",
           title: "Buscar & Listar Ativos",
-          desc: "Visualizar todos os ativos em grade com busca e prontuário.",
+          desc: "Todos os ativos em grade com prontuário",
           icon: "search",
-          color: "blue",
-          badge: `${assets.length} Itens`,
+          iconBgClass: "icon-box-blue",
+          badge: `${assets.length}`,
           onClick: () => this.pushLevel(this.getAssetsListContentView())
         },
         {
           id: "sub-alert-assets",
           title: "Ativos em Manutenção",
-          desc: "Equipamentos que apresentam falhas ou estão sob intervenção.",
+          desc: "Equipamentos com falhas ativas",
           icon: "alert-triangle",
-          color: "amber",
-          badge: `${assets.filter(a => a.status === 'MAINTENANCE').length} Em Alerta`,
-          badgeClass: "badge-danger",
+          iconBgClass: "icon-box-amber",
+          badge: `${assets.filter(a => a.status === 'MAINTENANCE').length}`,
           onClick: () => this.pushLevel(this.getAssetsFilteredContentView('MAINTENANCE'))
         },
         {
           id: "sub-print-qr",
           title: "Etiquetas de QR Code",
-          desc: "Gerar e imprimir etiquetas térmicas de QR Code em lote.",
+          desc: "Imprimir etiquetas térmicas em lote",
           icon: "printer",
-          color: "purple",
+          iconBgClass: "icon-box-purple",
           onClick: () => window.print()
         }
       ]
@@ -245,29 +243,27 @@ class AppController {
         {
           id: "sub-new-os",
           title: "Nova Ordem de Serviço",
-          desc: "Abertura rápida de OS corretiva ou preventiva.",
+          desc: "Abertura rápida de OS",
           icon: "file-plus",
-          color: "emerald",
+          iconBgClass: "icon-box-emerald",
           onClick: () => alert("Para abrir uma nova OS, selecione um Ativo no módulo de Ativos ou escaneie o QR Code.")
         },
         {
           id: "sub-active-os",
           title: "OSs em Andamento",
-          desc: "Atendimentos que estão sendo executados por técnicos em campo.",
+          desc: "Atendimentos sendo executados",
           icon: "clock",
-          color: "amber",
-          badge: `${workOrders.filter(w => w.status !== 'FINISHED').length} Abertas`,
-          badgeClass: "badge-warning",
+          iconBgClass: "icon-box-amber",
+          badge: `${workOrders.filter(w => w.status !== 'FINISHED').length}`,
           onClick: () => this.pushLevel(this.getWorkOrdersContentView('IN_PROGRESS'))
         },
         {
           id: "sub-finished-os",
           title: "OSs Concluídas & Laudos",
-          desc: "Histórico de serviços finalizados com fotos e assinatura.",
+          desc: "Histórico com fotos e assinatura",
           icon: "check-circle-2",
-          color: "blue",
-          badge: `${workOrders.filter(w => w.status === 'FINISHED').length} Concluídas`,
-          badgeClass: "badge-success",
+          iconBgClass: "icon-box-blue",
+          badge: `${workOrders.filter(w => w.status === 'FINISHED').length}`,
           onClick: () => this.pushLevel(this.getWorkOrdersContentView('FINISHED'))
         }
       ]
@@ -284,28 +280,26 @@ class AppController {
         {
           id: "sub-parts-stock",
           title: "Estoque de Peças",
-          desc: "Consultar catálogo de peças, insumos e estoque nas vans.",
+          desc: "Catálogo de peças & vans",
           icon: "package",
-          color: "blue",
-          badge: `${partsInventory.length} Peças`,
+          iconBgClass: "icon-box-blue",
+          badge: `${partsInventory.length}`,
           onClick: () => this.pushLevel(this.getPartsInventoryContentView())
         },
         {
           id: "sub-client-billing",
           title: "Faturamento por Cliente",
-          desc: "Resumo de contratos mensais, mão de obra e peças aplicadas.",
+          desc: "Contratos mensais & peças",
           icon: "file-text",
-          color: "emerald",
-          badge: "R$ 10.140,00",
-          badgeClass: "badge-success",
+          iconBgClass: "icon-box-emerald",
           onClick: () => this.pushLevel(this.getClientBillingContentView())
         },
         {
           id: "sub-add-part",
           title: "Cadastrar Nova Peça",
-          desc: "Adicionar componente ou insumo ao almoxarifado.",
+          desc: "Adicionar item ao almoxarifado",
           icon: "package-plus",
-          color: "purple",
+          iconBgClass: "icon-box-purple",
           onClick: () => document.getElementById('modal-add-part').classList.add('active')
         }
       ]
@@ -322,20 +316,18 @@ class AppController {
         {
           id: "sub-predictive-matrix",
           title: "Matriz Preditiva de Falhas",
-          desc: "Ativos sob risco iminente de quebra nos próximos 30 dias.",
+          desc: "Risco iminente nos próximos 30 dias",
           icon: "alert-octagon",
-          color: "pink",
-          badge: `${aiInsights.length} Alertas`,
-          badgeClass: "badge-danger",
+          iconBgClass: "icon-box-pink",
+          badge: `${aiInsights.length}`,
           onClick: () => this.pushLevel(this.getAIPredictiveContentView())
         },
         {
           id: "sub-ai-assistant",
           title: "Assistente Inteligente IA",
-          desc: "Consultas interativas em linguagem natural sobre o parque.",
+          desc: "Consultas em linguagem natural",
           icon: "bot",
-          color: "cyan",
-          badge: "Smart Query",
+          iconBgClass: "icon-box-cyan",
           onClick: () => this.pushLevel(this.getAIAssistantContentView())
         }
       ]
@@ -351,7 +343,7 @@ class AppController {
       renderContent: () => `
         <div style="max-width: 600px; margin: 0 auto; text-align: center;">
           <div class="card" style="padding: 36px; border: 2px dashed var(--primary);">
-            <div style="width: 100%; height: 240px; background-color: var(--bg-primary); border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative;">
+            <div style="width: 100%; height: 240px; background-color: #f8fafc; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative;">
               <i data-lucide="qr-code" style="font-size: 4rem; color: var(--primary);"></i>
               <div style="font-size: 0.9rem; color: var(--text-muted);">Câmera PWA ativa. Enquadre a etiqueta...</div>
               <div style="position: absolute; width: 80%; height: 2px; background: var(--primary); box-shadow: 0 0 12px var(--primary); animation: scanAnimation 2s infinite linear;"></div>
@@ -385,7 +377,7 @@ class AppController {
               <h4 style="font-size: 0.85rem; margin-bottom: 8px;">Locais de Instalação:</h4>
               <div style="display: flex; flex-direction: column; gap: 6px;">
                 ${c.locations.map(loc => `
-                  <div style="font-size: 0.8rem; padding: 6px 10px; background: var(--bg-primary); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 8px;">
+                  <div style="font-size: 0.8rem; padding: 6px 10px; background: #f8fafc; border-radius: var(--radius-sm); display: flex; align-items: center; gap: 8px;">
                     <i data-lucide="map-pin" style="color: var(--primary);"></i>
                     <span>${loc.name}</span>
                   </div>
@@ -426,7 +418,7 @@ class AppController {
             <div class="card asset-card-item" style="cursor: pointer;" data-id="${a.id}">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                 <div>
-                  <h3 style="font-size: 1.1rem; color: #fff;">${a.tagName}</h3>
+                  <h3 style="font-size: 1.1rem; color: #0f172a;">${a.tagName}</h3>
                   <div style="font-size: 0.8rem; color: var(--text-muted);">${a.categoryName}</div>
                 </div>
                 <span class="badge ${a.status === 'INSTALLED' ? 'badge-success' : 'badge-warning'}">
@@ -468,7 +460,7 @@ class AppController {
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
           ${filtered.map(a => `
             <div class="card asset-card-item" style="cursor: pointer;" data-id="${a.id}">
-              <h3 style="font-size: 1.1rem; color: #fff;">${a.tagName}</h3>
+              <h3 style="font-size: 1.1rem; color: #0f172a;">${a.tagName}</h3>
               <div style="font-size: 0.85rem; margin: 10px 0;"><strong>Cliente:</strong> ${a.customerName}</div>
               <button class="btn btn-primary btn-block" style="width: 100%;">Abrir Prontuário</button>
             </div>
@@ -617,7 +609,7 @@ class AppController {
           ${aiInsights.map(item => `
             <div class="card" style="border-left: 4px solid var(--danger);">
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <h3 style="font-size: 1.1rem; color: #fff;">${item.assetTag} (${item.customerName})</h3>
+                <h3 style="font-size: 1.1rem; color: #0f172a;">${item.assetTag} (${item.customerName})</h3>
                 <span class="badge badge-danger">Risco Preditivo ${item.riskScore}%</span>
               </div>
               <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;"><strong>Componente:</strong> ${item.predictedComponent} | <strong>Data Prevista:</strong> ${item.predictedFailureDate}</div>
@@ -641,7 +633,7 @@ class AppController {
             <input type="text" class="form-control" id="ai-query-input" placeholder="Ex: Qual o equipamento com maior risco este mês?">
             <button class="btn btn-primary" id="btn-submit-ai-query"><i data-lucide="send"></i> Consultar</button>
           </div>
-          <div id="ai-query-response-box" style="display: none; padding: 14px; background: var(--bg-primary); border-radius: var(--radius-md); border-left: 3px solid var(--primary); font-size: 0.875rem;">
+          <div id="ai-query-response-box" style="display: none; padding: 14px; background: #f8fafc; border-radius: var(--radius-md); border-left: 3px solid var(--primary); font-size: 0.875rem;">
             <!-- Rendered dynamically -->
           </div>
         </div>
@@ -836,7 +828,7 @@ class AppController {
 
     const checklistContainer = document.getElementById('os-exec-checklist-group');
     checklistContainer.innerHTML = wo.checklists.map(c => `
-      <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--bg-card); border-radius: var(--radius-sm); cursor: pointer;">
+      <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #f8fafc; border-radius: var(--radius-sm); cursor: pointer;">
         <input type="checkbox" ${c.isChecked ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: var(--primary);">
         <span style="font-size: 0.85rem;">${c.label}</span>
       </label>

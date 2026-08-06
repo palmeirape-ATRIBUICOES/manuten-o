@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SaaS Asset Management - Plataforma Modular por Blocos</title>
+  <title>SaaS Asset Management - Painel do Gestor</title>
   
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="src/assets/styles/main.css">
@@ -12,37 +12,63 @@
 <body>
 
   <div id="app">
-    <!-- Topbar Header (Clean Layout - No Sidebar, No Hamburger) -->
+    <!-- Topbar Header (Exact Match missoes-da-loja screenshot) -->
     <header class="topbar">
       <div class="brand-container" id="btn-go-home" title="Ir para a Tela Inicial">
         <div class="brand-icon">
-          <i data-lucide="shield-check"></i>
+          <i data-lucide="target"></i>
         </div>
-        <div class="brand-title">AssetSaaS</div>
+        <div>
+          <div class="brand-title">Painel do Gestor</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">Alfa Climatização • Semana 2026-W32</div>
+        </div>
       </div>
 
       <div class="topbar-right">
-        <div class="tenant-pill" id="tenant-display">
-          <i data-lucide="building"></i>
-          <span>Alfa Climatização</span>
+        <div class="user-role-badge">
+          <span>👑 GESTOR</span>
+          <span style="color: #92400e;">06/08/2026</span>
         </div>
 
-        <div class="user-profile">
-          <div class="avatar">CE</div>
-          <div style="font-size: 0.85rem;">
-            <div style="font-weight: 600;">Carlos Eduardo</div>
-            <div style="color: var(--text-muted); font-size: 0.75rem;">Técnico de Campo</div>
-          </div>
-        </div>
+        <button class="btn btn-secondary" style="padding: 6px 16px; font-size: 0.85rem;" onclick="location.reload()">
+          Sair
+        </button>
       </div>
     </header>
 
     <!-- Main Container -->
     <main class="main-container">
       
-      <!-- Navigation & Breadcrumb Bar -->
-      <div class="navigation-bar">
-        <button class="btn-back" id="btn-nav-back" style="display: none;">
+      <!-- Top Row Summary KPI Cards (Exact Match screenshot top row) -->
+      <div class="kpi-row" id="kpi-summary-row">
+        <div class="kpi-card">
+          <div class="kpi-label">FATURAMENTO HOJE</div>
+          <div class="kpi-value">0</div>
+          <div class="kpi-sub">R$ 10.140,00 (Mês)</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">ATIVOS MONITORADOS</div>
+          <div class="kpi-value" style="color: #6366f1;">142</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">100% com QR Code</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">EQUIPE EM CAMPO</div>
+          <div class="kpi-value">8</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">técnicos ativos</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">PEÇAS EM ESTOQUE</div>
+          <div class="kpi-value">222</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">itens em estoque</div>
+        </div>
+      </div>
+
+      <!-- Navigation & Breadcrumb Bar (Hidden on Level 0 Home, Visible on Levels > 0) -->
+      <div class="navigation-bar" id="navigation-bar" style="display: none;">
+        <button class="btn-back" id="btn-nav-back">
           <i data-lucide="arrow-left"></i>
           <span>Voltar ao Nível Anterior</span>
         </button>
@@ -52,13 +78,10 @@
         </div>
       </div>
 
-      <!-- Level Title Banner -->
-      <div id="level-header" style="margin-bottom: 24px;">
-        <h2 id="level-title" style="font-size: 1.6rem; margin-bottom: 4px;">Painel de Módulos</h2>
-        <p id="level-subtitle" style="color: var(--text-muted); font-size: 0.9rem;">Selecione um módulo para acessar as suas funcionalidades específicas.</p>
-      </div>
+      <!-- Section Title: MÓDULOS -->
+      <div class="section-heading" id="section-heading">MÓDULOS</div>
 
-      <!-- 1. Dynamic Block Grid Container (Level Navigation) -->
+      <!-- 1. Dynamic Block Grid Container (Level Navigation Modules) -->
       <div class="block-grid" id="block-grid-container">
         <!-- Rendered dynamically by app.js -->
       </div>
@@ -192,7 +215,7 @@
         </div>
       </div>
 
-      <div style="margin-bottom: 24px; padding: 16px; background-color: var(--bg-card); border-radius: var(--radius-md);">
+      <div style="margin-bottom: 24px; padding: 16px; background-color: #f8fafc; border-radius: var(--radius-md);">
         <h4 style="font-size: 0.95rem; margin-bottom: 10px;">Histórico Imutável & Troca de Peças</h4>
         <div id="modal-detail-history" style="display: flex; flex-direction: column; gap: 10px;">
           <!-- History entries rendered here -->
@@ -237,7 +260,7 @@
 
           <div style="border: 1px dashed var(--border-color); padding: 14px; border-radius: var(--radius-md); text-align: center;">
             <div style="font-size: 0.8rem; margin-bottom: 6px;">Foto Serviço Concluído (Depois)</div>
-            <div id="box-after-photo" style="height: 120px; background-color: var(--bg-card); display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: var(--radius-sm);">
+            <div id="box-after-photo" style="height: 120px; background-color: #f8fafc; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: var(--radius-sm);">
               <span style="font-size: 0.8rem; color: var(--primary);"><i data-lucide="camera"></i> Simular Foto</span>
             </div>
           </div>
@@ -246,7 +269,7 @@
 
       <div style="margin-bottom: 20px;">
         <h4 style="font-size: 0.9rem; margin-bottom: 6px; color: var(--text-muted);">3. Assinatura Digital do Cliente</h4>
-        <canvas id="signature-canvas" style="width: 100%; height: 140px; background-color: #0b1120; border-radius: var(--radius-md); border: var(--glass-border); cursor: crosshair;"></canvas>
+        <canvas id="signature-canvas" style="width: 100%; height: 140px; background-color: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border-color); cursor: crosshair;"></canvas>
         <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
           <button type="button" class="btn btn-secondary" id="btn-clear-signature" style="padding: 4px 12px; font-size: 0.75rem;">Limpar Assinatura</button>
         </div>
