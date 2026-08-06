@@ -8,8 +8,24 @@ import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from '.
 import { renderSubscriptionManagementPage } from './views/subscription-page.js';
 import { NewServiceWizard } from './views/new-service-wizard.js';
 import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
-import { renderDatabaseConfigView, attachDatabaseConfigEvents } from './views/database-config-view.js';
 import { offlineSyncQueue } from './mock-data.js';
+
+// database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
+let _dbConfigModule = null;
+async function loadDbConfigModule() {
+  if (!_dbConfigModule) {
+    try {
+      _dbConfigModule = await import('./views/database-config-view.js');
+    } catch (e) {
+      console.warn('[App] Failed to load database-config-view:', e);
+      _dbConfigModule = {
+        renderDatabaseConfigView: () => '<div class="card"><h3>Erro ao carregar módulo do banco de dados. Limpe o cache do navegador.</h3></div>',
+        attachDatabaseConfigEvents: () => {}
+      };
+    }
+  }
+  return _dbConfigModule;
+}
 
 class AppController {
   constructor() {
@@ -536,12 +552,15 @@ class AppController {
           icon: "database",
           iconBgClass: "icon-box-emerald",
           badge: "Cloud",
-          onClick: () => this.pushLevel({
-            title: "Configuração de Banco de Dados Cloud",
-            breadcrumbTitle: "Banco de Dados",
-            renderContent: () => renderDatabaseConfigView(),
-            onContentLoaded: () => attachDatabaseConfigEvents()
-          })
+          onClick: async () => {
+            const dbMod = await loadDbConfigModule();
+            this.pushLevel({
+              title: "Configuração de Banco de Dados Cloud",
+              breadcrumbTitle: "Banco de Dados",
+              renderContent: () => dbMod.renderDatabaseConfigView(),
+              onContentLoaded: () => dbMod.attachDatabaseConfigEvents()
+            });
+          }
         },
         {
           id: "mod-services-list",

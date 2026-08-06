@@ -5,32 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SaaS Asset Management - Gestão do Ciclo de Vida do Ativo Patrimonial</title>
 
-  <!-- Automatic Service Worker Unregister & Cache Purge Script (Fixes Stale Mobile Cache) -->
+  <!-- STEP 1: Force unregister ALL old Service Workers and purge ALL caches BEFORE anything loads -->
   <script>
     (function() {
-      const APP_VERSION = 'v2.1.7_PURGE';
-      if (localStorage.getItem('saas_app_version') !== APP_VERSION) {
-        localStorage.setItem('saas_app_version', APP_VERSION);
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for (let reg of registrations) {
-              reg.unregister().then(function() {
-                console.log('[PWA] Unregistered old SW:', reg.scope);
-              });
-            }
+      // Unregister all service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          registrations.forEach(function(reg) {
+            reg.unregister();
           });
-        }
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (let name of names) {
-              caches.delete(name);
-            }
+        });
+      }
+      // Delete all caches
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          names.forEach(function(name) {
+            caches.delete(name);
           });
-        }
+        });
       }
     })();
   </script>
-  
+
   <!-- PWA Manifest & Web Icons -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#6366f1">
@@ -40,26 +36,19 @@
   <link rel="stylesheet" href="src/assets/styles/main.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- On-Screen Global Error Boundary & Emergency Auto-Recovery -->
+  <!-- Global Error Boundary -->
   <script>
     window.addEventListener('error', function(e) {
-      console.error('[Global Error Caught]:', e.error || e.message);
-      var container = document.getElementById('public-view-container') || document.getElementById('app');
-      if (container && !window._errorDisplayed) {
-        window._errorDisplayed = true;
-        container.style.display = 'block';
-        container.innerHTML = `
-          <div style="max-width: 600px; margin: 40px auto; padding: 28px; background: #fff; border: 1px solid #fecaca; border-radius: 16px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.08);">
-            <div style="font-size: 2.5rem; margin-bottom: 12px;">⚠️</div>
-            <h3 style="color: #991b1b; margin-bottom: 8px;">Detecção de Erro de Execução</h3>
-            <div style="font-size: 0.85rem; color: #475569; background: #fef2f2; padding: 10px; border-radius: 8px; font-family: monospace; word-break: break-all; margin-bottom: 20px;">
-              ${e.message || 'Erro inesperado de módulo'}
-            </div>
-            <button onclick="localStorage.clear(); location.reload();" style="padding: 12px 24px; background: #0f172a; color: #fff; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">
-              🔄 Limpar Cache Local & Restaurar Aplicação
-            </button>
-          </div>
-        `;
+      console.error('[ERROR]', e.message, e.filename, e.lineno);
+      var c = document.getElementById('public-view-container');
+      if (c && !window._err) {
+        window._err = true;
+        c.style.display = 'block';
+        c.innerHTML = '<div style="max-width:500px;margin:40px auto;padding:24px;background:#fff;border:2px solid #fecaca;border-radius:16px;text-align:center">' +
+          '<h3 style="color:#991b1b;margin-bottom:12px">Erro detectado</h3>' +
+          '<p style="font-size:0.85rem;color:#64748b;background:#fef2f2;padding:10px;border-radius:8px;font-family:monospace;word-break:break-all;margin-bottom:16px">' + (e.message || 'Erro desconhecido') + '</p>' +
+          '<button onclick="if(confirm(\'Limpar dados locais e recarregar?\')){localStorage.clear();location.reload()}" style="padding:12px 24px;background:#0f172a;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer">Limpar Cache e Recarregar</button>' +
+          '</div>';
       }
     });
   </script>
@@ -67,10 +56,8 @@
 <body>
 
   <div id="app">
-    <!-- Top Trial Notification Banner (Rendered dynamically when logged in during trial) -->
     <div id="trial-banner-container"></div>
 
-    <!-- Topbar Header -->
     <header class="topbar">
       <div class="brand-container" id="btn-go-home" title="Ir para a Tela Inicial">
         <div class="brand-icon">
@@ -81,90 +68,61 @@
           <div style="font-size: 0.8rem; color: var(--text-muted);" id="header-company-name">Plataforma de Manutenção & Ativos</div>
         </div>
       </div>
-
-      <div class="topbar-right" id="header-topbar-right">
-        <!-- Rendered dynamically by app.js (Login / Reg / Tenant Status / Logout) -->
-      </div>
+      <div class="topbar-right" id="header-topbar-right"></div>
     </header>
 
-    <!-- Main Container -->
     <main class="main-container">
-      
-      <!-- Public View Container (Landing Page, Register, Login) -->
       <div id="public-view-container"></div>
 
-      <!-- Private View Container (Admin Dashboard) -->
       <div id="private-view-container" style="display: none;">
-        
-        <!-- Top Row Summary KPI Cards -->
         <div class="kpi-row" id="kpi-summary-row">
           <div class="kpi-card">
             <div class="kpi-label">FATURAMENTO MÊS</div>
             <div class="kpi-value" style="color: #10b981;">R$ 0.00</div>
             <div class="kpi-sub">Serviços Registrados</div>
           </div>
-
           <div class="kpi-card">
             <div class="kpi-label">CLIENTES & ATIVOS</div>
             <div class="kpi-value" style="color: #6366f1;">0</div>
             <div style="font-size: 0.85rem; color: var(--text-muted);">equipamentos</div>
           </div>
-
           <div class="kpi-card">
             <div class="kpi-label">EQUIPE EM CAMPO</div>
             <div class="kpi-value">1</div>
             <div style="font-size: 0.85rem; color: var(--text-muted);">técnicos ativos</div>
           </div>
-
           <div class="kpi-card">
             <div class="kpi-label">ASSINATURA SAAS</div>
-            <div class="kpi-value" style="color: #3b82f6;" id="kpi-sub-days">30 dias</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted);" id="kpi-sub-status">período gratuito</div>
+            <div class="kpi-value" style="color: #3b82f6;">30 dias</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">período gratuito</div>
           </div>
         </div>
 
-        <!-- Navigation & Breadcrumb Bar -->
         <div class="navigation-bar" id="navigation-bar" style="display: none;">
           <button class="btn-back" id="btn-nav-back">
             <i data-lucide="arrow-left"></i>
             <span>Voltar ao Nível Anterior</span>
           </button>
-
           <div class="breadcrumbs" id="breadcrumb-trail">
             <span class="active">Painel Principal</span>
           </div>
         </div>
 
-        <!-- Section Title: MÓDULOS -->
         <div class="section-heading" id="section-heading">MÓDULOS OPERACIONAIS</div>
-
-        <!-- Dynamic Block Grid Container -->
-        <div class="block-grid" id="block-grid-container">
-          <!-- Rendered dynamically by app.js -->
-        </div>
-
-        <!-- Detailed View Container -->
-        <div id="content-view-container" style="display: none;">
-          <!-- Rendered dynamically based on selected block -->
-        </div>
-
+        <div class="block-grid" id="block-grid-container"></div>
+        <div id="content-view-container" style="display: none;"></div>
       </div>
-
     </main>
   </div>
 
-  <!-- Register PWA Service Worker -->
+  <!-- Register the new pass-through Service Worker (replaces old caching one) -->
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('[PWA] Service Worker registrado com sucesso:', reg.scope))
-          .catch(err => console.log('[PWA] Erro ao registrar Service Worker:', err));
-      });
+      navigator.serviceWorker.register('./sw.js').catch(function() {});
     }
   </script>
 
-  <!-- Application Logic Modules -->
+  <!-- Application Logic -->
   <script type="module" src="src/app.js"></script>
 
 </body>
