@@ -50,9 +50,15 @@ class PDFGeneratorService {
 
         <!-- Header -->
         <div class="header">
-          <div>
-            <div class="company-name">${tenant.name}</div>
-            <div style="font-size: 12px; color: #64748b;">CNPJ: ${tenant.cnpj || '12.345.678/0001-90'} | Prestação de Serviços Técnicos</div>
+          <div style="display: flex; align-items: center; gap: 16px;">
+            ${(() => {
+              const logo = tenantDataService.getTenantLogo(tenantId);
+              return logo ? `<img src="${logo}" style="max-height: 55px; max-width: 170px; object-fit: contain;">` : '';
+            })()}
+            <div>
+              <div class="company-name">${tenant.name}</div>
+              <div style="font-size: 12px; color: #64748b;">CNPJ: ${tenant.cnpj || '12.345.678/0001-90'} | Prestação de Serviços Técnicos</div>
+            </div>
           </div>
           <div>
             <div class="report-title">LAUDO TÉCNICO OFICIAL</div>

@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v2.7.0 - Zero Cards for logo, direct File Picker on logo icon click.
+   v3.0.0 - Integrated Firebase Firestore Cloud DB & PDF Laudo Técnico Export.
    ========================================================================== */
 
 // Install: skip waiting immediately

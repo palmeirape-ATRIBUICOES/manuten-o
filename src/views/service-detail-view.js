@@ -55,16 +55,14 @@ export function renderServiceDetailView(serviceId) {
             </div>
           </div>
 
-          ${isFinalized ? `
-            <div style="display: flex; gap: 10px;">
-              <button class="btn btn-secondary" id="btn-top-view-pdf" style="font-size: 0.85rem;">
-                <i data-lucide="eye"></i> Visualizar Laudo
-              </button>
-              <button class="btn btn-primary" id="btn-top-download-pdf" style="font-size: 0.85rem;">
-                <i data-lucide="download"></i> Baixar PDF
-              </button>
-            </div>
-          ` : ''}
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" id="btn-top-view-pdf" style="font-size: 0.85rem;" title="Visualizar Laudo Técnico">
+              <i data-lucide="eye"></i> Visualizar Laudo
+            </button>
+            <button class="btn btn-primary" id="btn-top-download-pdf" style="font-size: 0.85rem;" title="Baixar Laudo / OS em PDF">
+              <i data-lucide="download"></i> Baixar PDF
+            </button>
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; font-size: 0.9rem;">

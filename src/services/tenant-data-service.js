@@ -2,8 +2,9 @@
    TENANT DATA SERVICE - MULTITENANT ISOLATION & AUTOMATIC SUPABASE CLOUD SYNC
    ========================================================================== */
 
-import { assets as demoAssets, workOrders as demoWorkOrders, pmocPlans as demoPmocPlans, partsInventory as demoParts, aiInsights as demoAiInsights, customers as demoCustomers } from '../mock-data.js';
-import { dbService } from './db-service.js';
+import { assets as demoAssets, workOrders as demoWorkOrders, pmocPlans as demoPmocPlans, partsInventory as demoParts, aiInsights as demoAiInsights, customers as demoCustomers } from '../mock-data.js?v=2.7.0';
+import { dbService } from './db-service.js?v=2.7.0';
+import { firebaseDBService } from './firebase-db-service.js?v=2.7.0';
 
 const TENANT_DATA_PREFIX = 'saas_asset_tenant_data_';
 
@@ -34,12 +35,31 @@ class TenantDataService {
       services: []
     };
     localStorage.setItem(key, JSON.stringify(cleanData));
+
+    // Try background initial fetch from Firebase Cloud DB
+    this.syncTenantDataFromFirebase(tenantId);
+
     return cleanData;
   }
 
   saveTenantData(tenantId, data) {
     const key = `${TENANT_DATA_PREFIX}${tenantId}`;
     localStorage.setItem(key, JSON.stringify(data));
+    
+    // Auto sync background to Firebase Cloud DB
+    firebaseDBService.saveTenantDataToCloud(tenantId, data).catch(() => {});
+  }
+
+  async syncTenantDataFromFirebase(tenantId) {
+    try {
+      const cloudData = await firebaseDBService.fetchTenantDataFromCloud(tenantId);
+      if (cloudData && typeof cloudData === 'object') {
+        const key = `${TENANT_DATA_PREFIX}${tenantId}`;
+        localStorage.setItem(key, JSON.stringify(cloudData));
+        return cloudData;
+      }
+    } catch(e) {}
+    return null;
   }
 
   // Clients CRUD + Cloud Sync
