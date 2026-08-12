@@ -349,27 +349,61 @@ export function attachServiceDetailEvents(tenantId, serviceId, refreshCallback) 
 
     document.querySelectorAll('.btn-close-modal').forEach(b => b.addEventListener('click', () => modalContainer.innerHTML = ''));
 
-    document.getElementById('form-modal-add-photo').addEventListener('submit', (e) => {
+    document.getElementById('form-modal-add-photo').addEventListener('submit', async (e) => {
       e.preventDefault();
       const photoType = document.getElementById('modal-photo-type').value;
       const caption = document.getElementById('modal-photo-caption').value.trim();
+      const fileInput = document.getElementById('modal-photo-file');
+      const file = fileInput.files ? fileInput.files[0] : null;
 
-      const samplePhotos = [
-        'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500',
-        'https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=500'
-      ];
-      const photoUrl = samplePhotos[Math.floor(Math.random() * samplePhotos.length)];
+      if (!file) {
+        alert("Por favor, selecione ou tire uma foto.");
+        return;
+      }
 
-      tenantDataService.addServicePhoto(tenantId, serviceId, {
-        photoType,
-        fileUrl: photoUrl,
-        caption,
-        uploadedBy: authService.getCurrentUser()?.fullName || 'Técnico'
-      });
+      try {
+        const compressedBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              const maxWidth = 800;
 
-      alert("✓ Fotos adicionadas com sucesso!");
-      modalContainer.innerHTML = '';
-      if (refreshCallback) refreshCallback();
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL('image/jpeg', 0.75));
+            };
+            img.onerror = () => resolve(event.target.result);
+            img.src = event.target.result;
+          };
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(file);
+        });
+
+        tenantDataService.addServicePhoto(tenantId, serviceId, {
+          photoType,
+          fileUrl: compressedBase64,
+          caption,
+          uploadedBy: authService.getCurrentUser()?.fullName || 'Técnico'
+        });
+
+        alert("✓ Foto adicionada com sucesso!");
+        modalContainer.innerHTML = '';
+        if (refreshCallback) refreshCallback();
+      } catch (err) {
+        alert("Erro ao processar a imagem: " + err.message);
+      }
     });
   };
 

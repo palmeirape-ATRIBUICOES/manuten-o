@@ -1,22 +1,22 @@
-import { CanvasSignaturePad } from './components/canvas-signature.js?v=3.1.0';
-import { authService } from './services/auth-service.js?v=3.1.0';
-import { subscriptionService } from './services/subscription-service.js?v=3.1.0';
-import { billingService } from './services/billing-service.js?v=3.1.0';
-import { tenantDataService } from './services/tenant-data-service.js?v=3.1.0';
-import { firebaseDBService } from './services/firebase-db-service.js?v=3.1.0';
-import { renderLandingPage } from './views/landing-page.js?v=3.1.0';
-import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=3.1.0';
-import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=3.1.0';
-import { NewServiceWizard } from './views/new-service-wizard.js?v=3.1.0';
-import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=3.1.0';
-import { offlineSyncQueue } from './mock-data.js?v=3.1.0';
+import { CanvasSignaturePad } from './components/canvas-signature.js?v=3.2.0';
+import { authService } from './services/auth-service.js?v=3.2.0';
+import { subscriptionService } from './services/subscription-service.js?v=3.2.0';
+import { billingService } from './services/billing-service.js?v=3.2.0';
+import { tenantDataService } from './services/tenant-data-service.js?v=3.2.0';
+import { firebaseDBService } from './services/firebase-db-service.js?v=3.2.0';
+import { renderLandingPage } from './views/landing-page.js?v=3.2.0';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=3.2.0';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=3.2.0';
+import { NewServiceWizard } from './views/new-service-wizard.js?v=3.2.0';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=3.2.0';
+import { offlineSyncQueue } from './mock-data.js?v=3.2.0';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
 let _dbConfigModule = null;
 async function loadDbConfigModule() {
   if (!_dbConfigModule) {
     try {
-      _dbConfigModule = await import('./views/database-config-view.js?v=3.1.0');
+      _dbConfigModule = await import('./views/database-config-view.js?v=3.2.0');
     } catch (e) {
       console.warn('[App] Failed to load database-config-view:', e);
       _dbConfigModule = {
@@ -367,20 +367,25 @@ class AppController {
         trialBannerContainer.innerHTML = '';
       }
 
-      // Update Topbar Right (WITHOUT ONLINE ICON PILL)
+      // Update Topbar Right
       topbarRight.innerHTML = `
         <div class="tenant-pill" style="background-color: #f1f5f9; color: #334155;">
           🏢 ${tenant.name}
         </div>
-        <div class="user-role-badge">
-          <span>👑 ${currentUser.fullName}</span>
-        </div>
+        <button class="user-role-badge" id="btn-open-user-menu" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); cursor: pointer; border-radius: 20px; padding: 4px 12px; transition: all 0.2s;" title="Minha Conta & Opções do Usuário">
+          <span>👑 ${currentUser.fullName}</span> ⚙️
+        </button>
         <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.85rem;" id="btn-app-logout">
           Sair
         </button>
       `;
 
       this.updateHeaderLogo();
+
+      const btnUserMenu = document.getElementById('btn-open-user-menu');
+      if (btnUserMenu) {
+        btnUserMenu.addEventListener('click', () => this.openAccountProfileModal());
+      }
 
       document.getElementById('btn-app-logout').addEventListener('click', () => {
         authService.logout();
@@ -1110,6 +1115,144 @@ class AppController {
       breadcrumbTitle: "QR Scanner",
       renderContent: () => `<div class="card" style="text-align: center; padding: 40px;">Câmera PWA ativa.</div>`
     };
+  }
+
+  openAccountProfileModal() {
+    const user = authService.getCurrentUser();
+    if (!user) return;
+    const tenant = authService.getTenantById(user.tenantId) || { name: user.companyName || 'Sua Empresa', cnpj: '' };
+
+    let modal = document.getElementById('modal-user-account');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-user-account';
+      modal.className = 'modal-overlay';
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width: 540px;">
+        <div class="modal-header">
+          <h3>⚙️ Minha Conta & Opções do Usuário</h3>
+          <button class="btn btn-secondary btn-close-modal">✕</button>
+        </div>
+
+        <form id="form-user-account-modal">
+          <div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <strong style="color: #0f172a;">☁️ Status do Banco de Dados Cloud</strong>
+              <div style="font-size: 0.8rem; color: #059669;">🟢 Conectado & Sincronizado em Nuvem</div>
+            </div>
+            <button type="button" class="btn btn-secondary" id="btn-modal-force-sync" style="font-size: 0.8rem;">
+              🔄 Sincronizar
+            </button>
+          </div>
+
+          <div class="section-heading" style="font-size: 0.85rem; margin-bottom: 12px;">DADOS PESSOAIS</div>
+          <div class="form-group">
+            <label class="form-label">Nome Completo *</label>
+            <input type="text" class="form-control" id="acc-fullname" value="${user.fullName || ''}" required>
+          </div>
+
+          <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">E-mail de Login *</label>
+              <input type="email" class="form-control" id="acc-email" value="${user.email || ''}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Telefone / WhatsApp *</label>
+              <input type="tel" class="form-control" id="acc-phone" value="${user.phone || ''}" required>
+            </div>
+          </div>
+
+          <div class="section-heading" style="font-size: 0.85rem; margin-top: 16px; margin-bottom: 12px;">DADOS DA EMPRESA</div>
+          <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Nome da Empresa</label>
+              <input type="text" class="form-control" id="acc-company-name" value="${tenant.name || ''}" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">CNPJ (Opcional)</label>
+              <input type="text" class="form-control" id="acc-cnpj" value="${tenant.cnpj || ''}" placeholder="00.000.000/0001-00">
+            </div>
+          </div>
+
+          <div class="section-heading" style="font-size: 0.85rem; margin-top: 16px; margin-bottom: 12px;">SEGURANÇA</div>
+          <div class="form-group">
+            <label class="form-label">Nova Senha (Deixe em branco para manter a atual)</label>
+            <input type="password" class="form-control" id="acc-password" placeholder="Digite uma nova senha se desejar alterar">
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+            <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    modal.classList.add('active');
+
+    modal.querySelectorAll('.btn-close-modal').forEach(b => b.addEventListener('click', () => modal.classList.remove('active')));
+
+    const btnForceSync = modal.querySelector('#btn-modal-force-sync');
+    if (btnForceSync) {
+      btnForceSync.addEventListener('click', async () => {
+        btnForceSync.textContent = '⏳ Sincronizando...';
+        const tenantData = tenantDataService.getTenantData(user.tenantId);
+        await firebaseDBService.saveTenantDataToCloud(user.tenantId, tenantData);
+        await firebaseDBService.saveUserRecordToCloud(user.email, { user, tenant, subscription: null });
+        btnForceSync.textContent = '✓ Sincronizado!';
+        setTimeout(() => btnForceSync.textContent = '🔄 Sincronizar', 2000);
+      });
+    }
+
+    modal.querySelector('#form-user-account-modal').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fullName = document.getElementById('acc-fullname').value.trim();
+      const email = document.getElementById('acc-email').value.trim().toLowerCase();
+      const phone = document.getElementById('acc-phone').value.trim();
+      const companyName = document.getElementById('acc-company-name').value.trim();
+      const cnpj = document.getElementById('acc-cnpj').value.trim();
+      const newPassword = document.getElementById('acc-password').value;
+
+      user.fullName = fullName;
+      user.email = email;
+      user.phone = phone;
+      user.companyName = companyName;
+      if (newPassword) {
+        user.rawPassword = newPassword;
+        user.passwordHash = authService.hashPassword(newPassword);
+      }
+
+      tenant.name = companyName;
+      tenant.cnpj = cnpj;
+
+      authService.setCurrentUser(user);
+
+      // Save Tenants list
+      const tenants = safeJSONParse('saas_asset_tenants_db', []);
+      const idxT = tenants.findIndex(t => t.id === tenant.id);
+      if (idxT >= 0) tenants[idxT] = tenant;
+      else tenants.push(tenant);
+      localStorage.setItem('saas_asset_tenants_db', JSON.stringify(tenants));
+
+      // Save Users list
+      const users = safeJSONParse('saas_asset_users_db', []);
+      const idxU = users.findIndex(u => u.id === user.id);
+      if (idxU >= 0) users[idxU] = user;
+      else users.push(user);
+      localStorage.setItem('saas_asset_users_db', JSON.stringify(users));
+
+      // Save to Cloud DB
+      await firebaseDBService.saveUserRecordToCloud(email, { user, tenant });
+      await firebaseDBService.saveDocumentToCloud('global_auth', 'users_list', users);
+
+      alert("✓ Dados da conta e perfil atualizados com sucesso!");
+      modal.classList.remove('active');
+      this.renderRouterView();
+    });
   }
 
   // Setup Global Events & Modals

@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v3.1.0 - Cross-Device Multi-Device Cloud Authentication & Centralized Firebase User Sync.
+   v3.2.0 - Real Photo Upload & Canvas Compression + Account Profile Settings Menu & Cloud Fallback Sync.
    ========================================================================== */
 
 // Install: skip waiting immediately

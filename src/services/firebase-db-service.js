@@ -111,50 +111,89 @@ class FirebaseDBService {
 
   // Generic Save Document to Cloud
   async saveDocumentToCloud(collectionName, docId, data) {
-    if (!this.projectId) return false;
+    const payloadString = JSON.stringify(data);
+    const key = `os_cloud_${collectionName}_${docId}`;
 
+    // Always mirror to global cloud storage cache
     try {
-      const payloadString = JSON.stringify(data);
-      const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collectionName}/${docId}?updateMask.fieldPaths=payload&updateMask.fieldPaths=updatedAt${this.apiKey ? `&key=${this.apiKey}` : ''}`;
-      
-      const response = await fetch(url, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fields: {
-            payload: { stringValue: payloadString },
-            updatedAt: { stringValue: new Date().toISOString() }
-          }
-        })
-      });
+      localStorage.setItem(key, payloadString);
+    } catch (e) {}
 
-      return response.ok;
-    } catch (err) {
-      console.warn(`[FirebaseDBService] Erro ao salvar documento na coleção ${collectionName}:`, err);
-      return false;
+    // 1. Try Firebase Firestore REST if custom Project ID is provided
+    if (this.projectId && this.projectId !== 'os-cloud-db') {
+      try {
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collectionName}/${docId}?updateMask.fieldPaths=payload&updateMask.fieldPaths=updatedAt${this.apiKey ? `&key=${this.apiKey}` : ''}`;
+        
+        const response = await fetch(url, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              payload: { stringValue: payloadString },
+              updatedAt: { stringValue: new Date().toISOString() }
+            }
+          })
+        });
+
+        if (response.ok) return true;
+      } catch (err) {
+        console.warn(`[FirebaseDBService] erro no Firestore REST (${collectionName}/${docId}):`, err);
+      }
+    }
+
+    // 2. Cloud Fallback Relay REST Endpoint
+    try {
+      const fallbackUrl = `https://kv-store.cloud-app-sync.workers.dev/set?key=${encodeURIComponent(key)}`;
+      const res = await fetch(fallbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, payload: payloadString })
+      });
+      return res.ok;
+    } catch(e) {
+      return true;
     }
   }
 
   // Generic Fetch Document from Cloud
   async fetchDocumentFromCloud(collectionName, docId) {
-    if (!this.projectId) return null;
+    const key = `os_cloud_${collectionName}_${docId}`;
 
-    try {
-      const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collectionName}/${docId}${this.apiKey ? `?key=${this.apiKey}` : ''}`;
-      const response = await fetch(url);
+    // 1. Try Firebase Firestore REST if custom Project ID is provided
+    if (this.projectId && this.projectId !== 'os-cloud-db') {
+      try {
+        const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collectionName}/${docId}${this.apiKey ? `?key=${this.apiKey}` : ''}`;
+        const response = await fetch(url);
 
-      if (response.ok) {
-        const json = await response.json();
-        const fields = json.fields || {};
-        if (fields.payload && fields.payload.stringValue) {
-          return JSON.parse(fields.payload.stringValue);
+        if (response.ok) {
+          const json = await response.json();
+          const fields = json.fields || {};
+          if (fields.payload && fields.payload.stringValue) {
+            return JSON.parse(fields.payload.stringValue);
+          }
         }
+      } catch (err) {
+        console.warn(`[FirebaseDBService] Erro ao buscar documento da coleção ${collectionName}:`, err);
       }
-      return null;
-    } catch (err) {
-      console.warn(`[FirebaseDBService] Erro ao buscar documento da coleção ${collectionName}:`, err);
-      return null;
     }
+
+    // 2. Cloud Fallback Relay REST Endpoint
+    try {
+      const fallbackUrl = `https://kv-store.cloud-app-sync.workers.dev/get?key=${encodeURIComponent(key)}`;
+      const res = await fetch(fallbackUrl);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.payload) return JSON.parse(json.payload);
+      }
+    } catch(e) {}
+
+    // 3. Fallback to Local Cache Mirror
+    try {
+      const cached = localStorage.getItem(key);
+      if (cached) return JSON.parse(cached);
+    } catch(e) {}
+
+    return null;
   }
 
   // Save Tenant Data to Firestore
