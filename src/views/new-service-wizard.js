@@ -520,22 +520,42 @@ export class NewServiceWizard {
       }
     }
 
-    // Step 3 Handlers (Photos)
+    // Step 3 Handlers (Real Photos from Camera/Gallery)
     if (this.currentStep === 3) {
       document.querySelectorAll('.btn-add-photo-type').forEach(btn => {
         btn.addEventListener('click', () => {
           const type = btn.getAttribute('data-type');
-          const samplePhotos = [
-            'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300',
-            'https://images.unsplash.com/photo-1581092162384-8987c1d64718?w=300'
-          ];
-          const photoUrl = samplePhotos[Math.floor(Math.random() * samplePhotos.length)];
+          
+          // Create file picker dynamically for real camera/gallery upload
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'image/*';
+          fileInput.multiple = true;
 
-          if (type === 'before') this.draft.photosBefore.push({ url: photoUrl, type: 'before' });
-          if (type === 'during') this.draft.photosDuring.push({ url: photoUrl, type: 'during' });
-          if (type === 'after') this.draft.photosAfter.push({ url: photoUrl, type: 'after' });
+          fileInput.onchange = async (e) => {
+            const files = Array.from(e.target.files || []);
+            if (files.length === 0) return;
 
-          this.updateDOM();
+            btn.textContent = '⏳ Processando Fotos...';
+            btn.disabled = true;
+
+            for (const file of files) {
+              try {
+                const compressedBase64 = await this.compressAndReadImage(file);
+                const photoObj = { url: compressedBase64, type: type, fileName: file.name };
+
+                if (type === 'before') this.draft.photosBefore.push(photoObj);
+                if (type === 'during') this.draft.photosDuring.push(photoObj);
+                if (type === 'after') this.draft.photosAfter.push(photoObj);
+              } catch (err) {
+                console.warn('[Wizard] Erro ao carregar foto:', err);
+              }
+            }
+
+            this.updateDOM();
+          };
+
+          fileInput.click();
         });
       });
 
@@ -629,6 +649,46 @@ export class NewServiceWizard {
     }
 
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  compressAndReadImage(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress to JPEG 75% quality (~50KB)
+          const base64Data = canvas.toDataURL('image/jpeg', 0.75);
+          resolve(base64Data);
+        };
+        img.onerror = () => reject(new Error("Falha ao carregar imagem."));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error("Falha ao ler arquivo."));
+      reader.readAsDataURL(file);
+    });
   }
 
   updateDOM() {
