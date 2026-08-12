@@ -535,25 +535,52 @@ class TenantDataService {
 
   // Tenant Custom Logo
   getTenantLogo(tenantId) {
-    try {
-      return localStorage.getItem(`saas_asset_logo_${tenantId}`) || null;
-    } catch(e) {
-      return null;
-    }
+    const key = `saas_asset_tenant_logo_${tenantId}`;
+    return localStorage.getItem(key) || localStorage.getItem(`saas_asset_logo_${tenantId}`) || null;
   }
 
-  saveTenantLogo(tenantId, logoDataUrl) {
-    try {
-      localStorage.setItem(`saas_asset_logo_${tenantId}`, logoDataUrl);
-    } catch(e) {
-      console.warn('[TenantDataService] Falha ao salvar logotipo localmente:', e);
-    }
+  saveTenantLogo(tenantId, base64Data) {
+    const key = `saas_asset_tenant_logo_${tenantId}`;
+    localStorage.setItem(key, base64Data);
   }
 
   removeTenantLogo(tenantId) {
-    try {
-      localStorage.removeItem(`saas_asset_logo_${tenantId}`);
-    } catch(e) {}
+    const key = `saas_asset_tenant_logo_${tenantId}`;
+    localStorage.removeItem(key);
+  }
+
+  // Technicians CRUD
+  getTechnicians(tenantId) {
+    const data = this.getTenantData(tenantId);
+    return data.technicians || [];
+  }
+
+  addTechnician(tenantId, tech) {
+    const data = this.getTenantData(tenantId);
+    if (!data.technicians) data.technicians = [];
+
+    const newTech = {
+      id: `tech-${Date.now()}`,
+      name: tech.name,
+      email: tech.email || '',
+      phone: tech.phone || '',
+      specialty: tech.specialty || 'Climatização & Refrigeração',
+      role: tech.role || 'Técnico de Campo',
+      status: 'ATIVO',
+      createdAt: new Date().toISOString()
+    };
+
+    data.technicians.unshift(newTech);
+    this.saveTenantData(tenantId, data);
+    return newTech;
+  }
+
+  deleteTechnician(tenantId, techId) {
+    const data = this.getTenantData(tenantId);
+    if (data.technicians) {
+      data.technicians = data.technicians.filter(t => t.id !== techId);
+      this.saveTenantData(tenantId, data);
+    }
   }
 }
 

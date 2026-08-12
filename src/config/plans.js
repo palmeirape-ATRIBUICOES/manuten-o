@@ -1,77 +1,64 @@
 /* ==========================================================================
-   PLANS CONFIGURATION - CENTRALIZED SAAS SUBSCRIPTION TIERS
+   PLANS CONFIGURATION - SAAS SUBSCRIPTION TIERS (STARTER, PRO, BUSINESS)
    ========================================================================== */
 
 export const SAAS_PLANS = [
   {
-    id: "basic",
-    name: "Básico",
-    description: "Ideal para pequenos prestadores em fase inicial de estruturação.",
-    priceMonthly: 89.00,
-    priceYearly: 890.00,
-    maxUsers: 2,
-    maxCustomers: 10,
-    maxAssets: 50,
+    id: "starter",
+    name: "Starter",
+    description: "Para pequenos prestadores e autônomos.",
+    priceMonthly: 19.00,
+    priceCurrency: "US$",
+    maxUsers: 1,
     status: "ACTIVE",
     badgeClass: "badge-info",
     features: [
-      "Até 2 Usuários / Técnicos",
-      "Até 50 Ativos com QR Code",
-      "Ordens de Serviço Preventivas e Corretivas",
-      "Assinatura Digital do Cliente no Celular",
-      "Checklists Personalizados por Categoria",
-      "Suporte por E-mail"
+      "1 Usuário / Técnico",
+      "Clientes e Equipamentos",
+      "Ordens de Serviço",
+      "Galeria de Fotos (Antes / Depois)"
     ]
   },
   {
-    id: "professional",
-    name: "Profissional",
-    description: "Para empresas de manutenção em rápido crescimento.",
-    priceMonthly: 189.00,
-    priceYearly: 1890.00,
-    maxUsers: 10,
-    maxCustomers: 50,
-    maxAssets: 300,
+    id: "pro",
+    name: "Pro",
+    description: "Para empresas de manutenção em crescimento.",
+    priceMonthly: 39.00,
+    priceCurrency: "US$",
+    maxUsers: 3,
     status: "ACTIVE",
     popular: true,
     badgeClass: "badge-success",
     features: [
-      "Tudo do Plano Básico",
-      "Até 10 Usuários / Técnicos",
-      "Até 300 Ativos Patrimoniais",
-      "Módulo PMOC & Laudos Técnicos em PDF",
-      "Auditoria por Visão Computacional / IA",
-      "Matriz Preditiva de Falhas por IA",
-      "Modo PWA Offline para Subsolos",
-      "Suporte Prioritário por WhatsApp"
+      "3 Usuários / Técnicos",
+      "Tudo do Plano Starter",
+      "Leitor de QR Code & Histórico",
+      "Orçamentos & Invoices",
+      "Assinatura Digital & Lembretes de Vencimento"
     ]
   },
   {
-    id: "enterprise",
-    name: "Empresa",
-    description: "Para grandes operações e alta demanda de atendimentos.",
-    priceMonthly: 389.00,
-    priceYearly: 3890.00,
-    maxUsers: 999,
-    maxCustomers: 999,
-    maxAssets: 9999,
+    id: "business",
+    name: "Business",
+    description: "Para grandes operações e equipes de manutenção.",
+    priceMonthly: 79.00,
+    priceCurrency: "US$",
+    maxUsers: 10,
     status: "ACTIVE",
     badgeClass: "badge-warning",
     features: [
-      "Tudo do Plano Profissional",
-      "Usuários e Técnicos Ilimitados",
-      "Ativos e Clientes Ilimitados",
-      "Multitenancy Avançado com RLS PostgreSQL",
-      "Assistente Inteligente IA Dedicado",
-      "Gestão de Almoxarifado Central & Vans",
-      "Gerente de Conta Dedicado & Onboarding VIP"
+      "10 Usuários / Técnicos",
+      "Tudo do Plano Pro",
+      "Automações & Inteligência Artificial",
+      "Relatórios Financeiros Avançados",
+      "Personalização Completa com Marca/Logotipo"
     ]
   }
 ];
 
 export const TRIAL_CONFIG = {
   durationDays: 30,
-  defaultPlanId: "professional",
+  defaultPlanId: "pro",
   warningThresholdsDays: {
     highlightYellow: 7,
     highlightOrange: 3,

@@ -10,6 +10,7 @@ import { renderSubscriptionManagementPage } from './views/subscription-page.js';
 import { NewServiceWizard } from './views/new-service-wizard.js';
 import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
 import { renderAdminUsersView, attachAdminUsersEvents } from './views/admin-users-view.js';
+import { renderTechniciansView, attachTechniciansEvents } from './views/technicians-view.js';
 import { offlineSyncQueue } from './mock-data.js';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
@@ -809,8 +810,30 @@ class AppController {
           iconBgClass: "icon-box-amber",
           badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length}`,
           onClick: () => this.pushLevel(this.getPWAOfflineLevel1Config())
+        },
+        {
+          id: "mod-technicians",
+          title: "Técnicos & Equipe",
+          desc: "Cadastro de técnicos da equipe & permissões",
+          icon: "user-check",
+          iconBgClass: "icon-box-indigo",
+          badge: `${(tenantData.technicians || []).length} membros`,
+          onClick: () => this.pushLevel(this.getTechniciansLevel1Config())
         }
       ]
+    };
+  }
+
+  getTechniciansLevel1Config() {
+    return {
+      title: "Gestão de Técnicos & Equipe",
+      subtitle: "Cadastro dos membros da equipe para atribuição de Ordens de Serviço",
+      breadcrumbTitle: "Técnicos & Equipe",
+      renderContent: () => renderTechniciansView(),
+      onContentLoaded: () => attachTechniciansEvents(
+        () => this.renderCurrentLevel(),
+        () => this.pushLevel(this.getSubscriptionManagementLevel1Config())
+      )
     };
   }
 

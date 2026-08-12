@@ -93,12 +93,15 @@ export class MasterAdminPortal {
                 Administração centralizada de clientes, empresas, acessos e banco de dados em nuvem.
               </p>
             </div>
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
               <button class="btn btn-secondary" id="btn-master-sync" style="background: #fff; color: #312e81; font-weight: 700; border: none; font-size: 0.85rem;">
                 🔄 Sincronizar Nuvem
               </button>
               <button class="btn btn-primary" id="btn-master-add-tenant" style="background: #6366f1; border: none; font-size: 0.85rem;">
                 🏢 Cadastrar Nova Empresa Cliente
+              </button>
+              <button class="btn btn-secondary" id="btn-master-purge-db" style="background: #991b1b; color: #fff; border: none; font-size: 0.85rem;" title="Limpar Todo o Banco de Dados">
+                🧹 Limpar Banco
               </button>
               <button class="btn btn-secondary" id="btn-master-logout" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.85rem;">
                 Sair
@@ -166,9 +169,14 @@ export class MasterAdminPortal {
                         </span>
                       </td>
                       <td style="padding: 12px; text-align: right;">
-                        <button class="btn btn-secondary btn-master-impersonate" data-tenant-id="${t.id}" data-user-email="${owner.email}" style="font-size: 0.75rem; padding: 4px 8px; background: #4f46e5; color: #fff; border: none;" title="Acessar Sistema como esta Empresa">
-                          🚀 Acessar Sistema
-                        </button>
+                        <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                          <button class="btn btn-secondary btn-master-impersonate" data-tenant-id="${t.id}" data-user-email="${owner.email}" style="font-size: 0.75rem; padding: 4px 8px; background: #4f46e5; color: #fff; border: none;" title="Acessar Sistema como esta Empresa">
+                            🚀 Acessar
+                          </button>
+                          <button class="btn btn-secondary btn-master-delete-tenant" data-tenant-id="${t.id}" data-company-name="${t.name}" style="font-size: 0.75rem; padding: 4px 8px; background: #991b1b; color: #fff; border: none;" title="Excluir Empresa Cliente">
+                            🗑️ Excluir
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   `;
@@ -274,6 +282,53 @@ export class MasterAdminPortal {
       });
     }
 
+    const btnPurgeDb = document.getElementById('btn-master-purge-db');
+    if (btnPurgeDb) {
+      btnPurgeDb.addEventListener('click', async () => {
+        if (confirm("⚠️ ATENÇÃO EXTREMA: Deseja realmente RESETAR E LIMPAR TODO O BANCO DE DADOS do sistema? Essa ação apagará todas as empresas, usuários e dados cadastrados.")) {
+          const defaultTenants = [
+            {
+              id: "tenant-alfa-001",
+              name: "Alfa Climatização & Soluções Industriais",
+              cnpj: "12.345.678/0001-90",
+              createdAt: new Date().toISOString()
+            }
+          ];
+
+          const defaultUsers = [
+            {
+              id: "user-001",
+              tenantId: "tenant-alfa-001",
+              fullName: "Marcos Vinícius",
+              email: "gestor@alfa.com.br",
+              phone: "(81) 99887-1122",
+              passwordHash: authService.hashPassword("123"),
+              rawPassword: "123",
+              role: "ADMIN",
+              isActive: true,
+              createdAt: new Date().toISOString()
+            }
+          ];
+
+          localStorage.setItem('saas_asset_tenants_db', JSON.stringify(defaultTenants));
+          localStorage.setItem('saas_asset_users_db', JSON.stringify(defaultUsers));
+          localStorage.setItem('saas_asset_subscriptions_db', JSON.stringify([]));
+
+          // Clean tenant workspace keys
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('saas_asset_tenant_data_') || key.startsWith('saas_asset_tenant_logo_') || key.startsWith('os_cloud_')) {
+              localStorage.removeItem(key);
+            }
+          });
+
+          await firebaseDBService.saveDocumentToCloud('global_auth', 'users_list', defaultUsers);
+
+          alert("✓ Banco de dados limpo e restaurado para o estado inicial!");
+          if (refreshCallback) refreshCallback();
+        }
+      });
+    }
+
     if (btnAddTenant) {
       btnAddTenant.addEventListener('click', () => {
         modalContainer.innerHTML = `
@@ -341,6 +396,41 @@ export class MasterAdminPortal {
         });
       });
     }
+
+    // Delete Tenant (Excluir Empresa Cliente)
+    document.querySelectorAll('.btn-master-delete-tenant').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const tenantId = e.currentTarget.getAttribute('data-tenant-id');
+        const companyName = e.currentTarget.getAttribute('data-company-name');
+
+        if (confirm(`⚠️ ATENÇÃO: Deseja realmente EXCLUIR PERMANENTEMENTE a empresa cliente "${companyName}" (ID: ${tenantId}) e todos os seus usuários e dados?`)) {
+          // Remove Tenant
+          let tenants = JSON.parse(localStorage.getItem('saas_asset_tenants_db') || '[]');
+          tenants = tenants.filter(t => t.id !== tenantId);
+          localStorage.setItem('saas_asset_tenants_db', JSON.stringify(tenants));
+
+          // Remove Users
+          let users = authService.getAllUsers();
+          users = users.filter(u => u.tenantId !== tenantId);
+          localStorage.setItem('saas_asset_users_db', JSON.stringify(users));
+
+          // Remove Subscriptions
+          let subs = JSON.parse(localStorage.getItem('saas_asset_subscriptions_db') || '[]');
+          subs = subs.filter(s => s.tenantId !== tenantId);
+          localStorage.setItem('saas_asset_subscriptions_db', JSON.stringify(subs));
+
+          // Remove Workspace Data
+          localStorage.removeItem(`saas_asset_tenant_data_${tenantId}`);
+          localStorage.removeItem(`saas_asset_tenant_logo_${tenantId}`);
+
+          // Cloud Sync
+          await firebaseDBService.saveDocumentToCloud('global_auth', 'users_list', users);
+
+          alert(`✓ Empresa cliente "${companyName}" excluída com sucesso!`);
+          if (refreshCallback) refreshCallback();
+        }
+      });
+    });
 
     // Impersonate
     document.querySelectorAll('.btn-master-impersonate').forEach(btn => {
