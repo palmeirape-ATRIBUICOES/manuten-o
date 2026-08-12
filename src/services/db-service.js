@@ -2,7 +2,7 @@
    DB SERVICE - SUPABASE POSTGRESQL CLOUD REST ADAPTER & AUTOMATIC CREDENTIALS
    ========================================================================== */
 
-import { ENV } from '../config/env.js?v=2.2.7';
+import { ENV } from '../config/env.js';
 
 const STORAGE_KEYS = {
   SUPABASE_URL: 'saas_asset_supabase_url',

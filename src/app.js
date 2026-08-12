@@ -1,22 +1,22 @@
-import { CanvasSignaturePad } from './components/canvas-signature.js?v=3.2.0';
-import { authService } from './services/auth-service.js?v=3.2.0';
-import { subscriptionService } from './services/subscription-service.js?v=3.2.0';
-import { billingService } from './services/billing-service.js?v=3.2.0';
-import { tenantDataService } from './services/tenant-data-service.js?v=3.2.0';
-import { firebaseDBService } from './services/firebase-db-service.js?v=3.2.0';
-import { renderLandingPage } from './views/landing-page.js?v=3.2.0';
-import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js?v=3.2.0';
-import { renderSubscriptionManagementPage } from './views/subscription-page.js?v=3.2.0';
-import { NewServiceWizard } from './views/new-service-wizard.js?v=3.2.0';
-import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js?v=3.2.0';
-import { offlineSyncQueue } from './mock-data.js?v=3.2.0';
+import { CanvasSignaturePad } from './components/canvas-signature.js';
+import { authService } from './services/auth-service.js';
+import { subscriptionService } from './services/subscription-service.js';
+import { billingService } from './services/billing-service.js';
+import { tenantDataService } from './services/tenant-data-service.js';
+import { firebaseDBService } from './services/firebase-db-service.js';
+import { renderLandingPage } from './views/landing-page.js';
+import { renderRegisterPage, renderLoginPage, renderForgotPasswordPage } from './views/auth-pages.js';
+import { renderSubscriptionManagementPage } from './views/subscription-page.js';
+import { NewServiceWizard } from './views/new-service-wizard.js';
+import { renderServiceDetailView, attachServiceDetailEvents } from './views/service-detail-view.js';
+import { offlineSyncQueue } from './mock-data.js';
 
 // database-config-view is loaded dynamically to prevent stale SW cache from crashing the app
 let _dbConfigModule = null;
 async function loadDbConfigModule() {
   if (!_dbConfigModule) {
     try {
-      _dbConfigModule = await import('./views/database-config-view.js?v=3.2.0');
+      _dbConfigModule = await import('./views/database-config-view.js');
     } catch (e) {
       console.warn('[App] Failed to load database-config-view:', e);
       _dbConfigModule = {

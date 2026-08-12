@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>OS Cloud - Gestão do Ciclo de Vida do Ativo Patrimonial</title>
 
   <!-- STEP 1: Force unregister ALL old Service Workers and purge ALL caches BEFORE anything loads -->
@@ -154,15 +157,15 @@
     </main>
   </div>
 
-  <!-- Register the new pass-through Service Worker (replaces old caching one) -->
+  <!-- Register the pass-through Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=3.2.0').catch(function() {});
+      navigator.serviceWorker.register('./sw.js').catch(function() {});
     }
   </script>
 
-  <!-- Application Logic -->
-  <script type="module" src="src/app.js?v=3.2.0"></script>
+  <!-- Application Logic (Clean Permanent URL) -->
+  <script type="module" src="src/app.js"></script>
 
 </body>
 </html>

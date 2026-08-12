@@ -2,7 +2,7 @@
    FIREBASE FIRESTORE CLOUD DB SERVICE - REALTIME REST & CLOUD SYNC ADAPTER
    ========================================================================== */
 
-import { ENV } from '../config/env.js?v=2.7.0';
+import { ENV } from '../config/env.js';
 
 const STORAGE_KEYS = {
   PROJECT_ID: 'saas_firebase_project_id',

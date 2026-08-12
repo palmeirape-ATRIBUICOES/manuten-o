@@ -2,8 +2,8 @@
    AUTH SERVICE - SAFE JSON PARSING & MULTITENANT CREATION
    ========================================================================== */
 
-import { TRIAL_CONFIG } from '../config/plans.js?v=3.0.0';
-import { firebaseDBService } from './firebase-db-service.js?v=3.0.0';
+import { TRIAL_CONFIG } from '../config/plans.js';
+import { firebaseDBService } from './firebase-db-service.js';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'saas_asset_current_user',

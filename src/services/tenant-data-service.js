@@ -2,9 +2,9 @@
    TENANT DATA SERVICE - MULTITENANT ISOLATION & AUTOMATIC SUPABASE CLOUD SYNC
    ========================================================================== */
 
-import { assets as demoAssets, workOrders as demoWorkOrders, pmocPlans as demoPmocPlans, partsInventory as demoParts, aiInsights as demoAiInsights, customers as demoCustomers } from '../mock-data.js?v=2.7.0';
-import { dbService } from './db-service.js?v=2.7.0';
-import { firebaseDBService } from './firebase-db-service.js?v=2.7.0';
+import { assets as demoAssets, workOrders as demoWorkOrders, pmocPlans as demoPmocPlans, partsInventory as demoParts, aiInsights as demoAiInsights, customers as demoCustomers } from '../mock-data.js';
+import { dbService } from './db-service.js';
+import { firebaseDBService } from './firebase-db-service.js';
 
 const TENANT_DATA_PREFIX = 'saas_asset_tenant_data_';
 
