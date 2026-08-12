@@ -1,0 +1,53 @@
+<!DOCTYPE HTML>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Portal Master Admin - OS Cloud</title>
+
+  <!-- PWA Manifest & Web Icons -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e1b4b">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3652/3652191.png">
+
+  <!-- Fonts & Local Styles -->
+  <link rel="stylesheet" href="src/assets/styles/main.css">
+  <script src="src/assets/js/lucide.min.js"></script>
+
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .master-admin-header { background: #1e1b4b; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .master-badge { background: #6366f1; color: #fff; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <div id="admin-app-root">
+    <header class="master-admin-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 36px; height: 36px; background: #6366f1; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+          👑
+        </div>
+        <div>
+          <strong style="font-size: 1.1rem; color: #fff;">OS Cloud — Portal Master Admin</strong>
+          <div style="font-size: 0.78rem; color: #a5b4fc;">Painel de Controle Geral do Dono do Sistema</div>
+        </div>
+      </div>
+      <div id="admin-topbar-right">
+        <span class="master-badge">MASTER SUPERADMIN</span>
+      </div>
+    </header>
+
+    <main style="padding: 24px 16px; max-width: 1100px; margin: 0 auto;" id="admin-main-content">
+      <!-- Dynamic Content Rendered by admin-app.js -->
+    </main>
+  </div>
+
+  <!-- Master Admin Application Logic -->
+  <script type="module" src="src/admin-app.js"></script>
+
+</body>
+</html>

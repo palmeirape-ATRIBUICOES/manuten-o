@@ -809,27 +809,8 @@ class AppController {
           iconBgClass: "icon-box-amber",
           badge: `${offlineSyncQueue.filter(q => q.status === 'PENDING_SYNC').length}`,
           onClick: () => this.pushLevel(this.getPWAOfflineLevel1Config())
-        },
-        {
-          id: "mod-admin-users",
-          title: "Controle de Usuários Cloud",
-          desc: "Painel admin, logins e permissões de acesso",
-          icon: "users",
-          iconBgClass: "icon-box-indigo",
-          badge: `${authService.getAllUsers().length} usuários`,
-          onClick: () => this.pushLevel(this.getAdminUsersLevel1Config())
         }
       ]
-    };
-  }
-
-  getAdminUsersLevel1Config() {
-    return {
-      title: "Painel Admin de Controle de Usuários",
-      subtitle: "Gestão de e-mails, acessos e sincronização de clientes na nuvem",
-      breadcrumbTitle: "Gestão de Usuários",
-      renderContent: () => renderAdminUsersView(),
-      onContentLoaded: () => attachAdminUsersEvents(() => this.renderCurrentLevel())
     };
   }
 
