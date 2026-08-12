@@ -141,30 +141,37 @@ export function attachTechniciansEvents(refreshCallback, onUpgradePlanCallback) 
 
               <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div class="form-group">
-                  <label class="form-label">E-mail</label>
-                  <input type="email" class="form-control" id="tech-email" placeholder="lucas@empresa.com">
+                  <label class="form-label">E-mail de Login do Técnico *</label>
+                  <input type="email" class="form-control" id="tech-email" placeholder="lucas@empresa.com" required>
                 </div>
 
+                <div class="form-group">
+                  <label class="form-label">Senha de Acesso do Técnico *</label>
+                  <input type="password" class="form-control" id="tech-password" placeholder="Mínimo 3 caracteres" required>
+                </div>
+              </div>
+
+              <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div class="form-group">
                   <label class="form-label">Telefone / WhatsApp</label>
                   <input type="tel" class="form-control" id="tech-phone" placeholder="(81) 99887-1122">
                 </div>
-              </div>
 
-              <div class="form-group">
-                <label class="form-label">Especialidade Principal</label>
-                <select class="form-control" id="tech-specialty">
-                  <option value="Climatização & HVAC">Climatização & HVAC</option>
-                  <option value="Refrigeração Comercial">Refrigeração Comercial</option>
-                  <option value="Elétrica & Comandos">Elétrica & Comandos</option>
-                  <option value="Mecânica & Hidráulica">Mecânica & Hidráulica</option>
-                  <option value="Geral & Manutenção">Geral & Manutenção</option>
-                </select>
+                <div class="form-group">
+                  <label class="form-label">Especialidade Principal</label>
+                  <select class="form-control" id="tech-specialty">
+                    <option value="Climatização & HVAC">Climatização & HVAC</option>
+                    <option value="Refrigeração Comercial">Refrigeração Comercial</option>
+                    <option value="Elétrica & Comandos">Elétrica & Comandos</option>
+                    <option value="Mecânica & Hidráulica">Mecânica & Hidráulica</option>
+                    <option value="Geral & Manutenção">Geral & Manutenção</option>
+                  </select>
+                </div>
               </div>
 
               <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
                 <button type="button" class="btn btn-secondary btn-close-modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary">Salvar Técnico</button>
+                <button type="submit" class="btn btn-primary">Criar Conta e Salvar Técnico</button>
               </div>
             </form>
           </div>
@@ -176,14 +183,32 @@ export function attachTechniciansEvents(refreshCallback, onUpgradePlanCallback) 
       document.getElementById('form-modal-add-tech').addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('tech-name').value.trim();
-        const email = document.getElementById('tech-email').value.trim();
+        const email = document.getElementById('tech-email').value.trim().toLowerCase();
+        const password = document.getElementById('tech-password').value;
         const phone = document.getElementById('tech-phone').value.trim();
         const specialty = document.getElementById('tech-specialty').value;
 
-        tenantDataService.addTechnician(tenantId, { name, email, phone, specialty });
-        alert(`✓ Técnico ${name} cadastrado com sucesso!`);
-        modalContainer.innerHTML = '';
-        if (refreshCallback) refreshCallback();
+        try {
+          // Register User Account linked to this company's tenantId
+          const companyName = user ? (user.companyName || 'Sua Empresa') : 'Sua Empresa';
+          authService.registerTechnicianUser({
+            tenantId,
+            fullName: name,
+            companyName: companyName,
+            email: email,
+            phone: phone,
+            password: password
+          });
+
+          // Save Technician Record in workspace
+          tenantDataService.addTechnician(tenantId, { name, email, phone, specialty });
+
+          alert(`✓ Técnico ${name} cadastrado com sucesso! Conta de acesso criada e vinculada à sua empresa.`);
+          modalContainer.innerHTML = '';
+          if (refreshCallback) refreshCallback();
+        } catch (err) {
+          alert("Erro ao cadastrar técnico: " + err.message);
+        }
       });
     });
   }

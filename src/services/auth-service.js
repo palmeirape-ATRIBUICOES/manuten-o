@@ -156,6 +156,46 @@ class AuthService {
     return { user: newUser, tenant: newTenant, subscription: newSub };
   }
 
+  registerTechnicianUser({ tenantId, fullName, companyName, email, phone, password }) {
+    const users = this.getAllUsers();
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (users.find(u => u.email && u.email.toLowerCase() === cleanEmail)) {
+      throw new Error(`Este e-mail "${cleanEmail}" já está cadastrado no sistema.`);
+    }
+
+    const userId = `user-${Date.now()}`;
+    const newTechUser = {
+      id: userId,
+      tenantId: tenantId,
+      fullName: fullName,
+      companyName: companyName,
+      email: cleanEmail,
+      phone: phone,
+      passwordHash: this.hashPassword(password),
+      rawPassword: password,
+      role: "TECHNICIAN",
+      isActive: true,
+      createdAt: new Date().toISOString()
+    };
+
+    users.push(newTechUser);
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+
+    const tenant = this.getTenantById(tenantId) || { id: tenantId, name: companyName };
+
+    // Save Technician Account to Firebase Cloud DB in background
+    firebaseDBService.saveUserRecordToCloud(cleanEmail, {
+      user: newTechUser,
+      tenant: tenant,
+      subscription: null
+    }).catch(() => {});
+
+    firebaseDBService.saveDocumentToCloud('global_auth', 'users_list', users).catch(() => {});
+
+    return newTechUser;
+  }
+
   async login(email, password) {
     const cleanEmail = (email || '').trim().toLowerCase();
     let users = this.getAllUsers();
