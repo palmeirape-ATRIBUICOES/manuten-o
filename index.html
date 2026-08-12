@@ -157,12 +157,12 @@
   <!-- Register the new pass-through Service Worker (replaces old caching one) -->
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=3.0.0').catch(function() {});
+      navigator.serviceWorker.register('./sw.js?v=3.1.0').catch(function() {});
     }
   </script>
 
   <!-- Application Logic -->
-  <script type="module" src="src/app.js?v=3.0.0"></script>
+  <script type="module" src="src/app.js?v=3.1.0"></script>
 
 </body>
 </html>

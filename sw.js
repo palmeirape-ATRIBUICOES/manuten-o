@@ -1,6 +1,6 @@
 /* ==========================================================================
    SERVICE WORKER - PASS-THROUGH (NO CACHING) TO FIX STALE MOBILE CACHE
-   v3.0.0 - Integrated Firebase Firestore Cloud DB & PDF Laudo Técnico Export.
+   v3.1.0 - Cross-Device Multi-Device Cloud Authentication & Centralized Firebase User Sync.
    ========================================================================== */
 
 // Install: skip waiting immediately

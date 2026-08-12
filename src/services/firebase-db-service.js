@@ -95,13 +95,27 @@ class FirebaseDBService {
     return null;
   }
 
-  // Save Tenant Data to Firestore
-  async saveTenantDataToCloud(tenantId, data) {
+  // Save User & Tenant Account to Cloud
+  async saveUserRecordToCloud(email, userRecord) {
+    if (!this.projectId) return false;
+    const cleanEmail = (email || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+    return this.saveDocumentToCloud('users', cleanEmail, userRecord);
+  }
+
+  // Fetch User & Tenant Account from Cloud
+  async fetchUserRecordFromCloud(email) {
+    if (!this.projectId) return null;
+    const cleanEmail = (email || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+    return this.fetchDocumentFromCloud('users', cleanEmail);
+  }
+
+  // Generic Save Document to Cloud
+  async saveDocumentToCloud(collectionName, docId, data) {
     if (!this.projectId) return false;
 
     try {
       const payloadString = JSON.stringify(data);
-      const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/tenants/${tenantId}?updateMask.fieldPaths=payload&updateMask.fieldPaths=updatedAt${this.apiKey ? `&key=${this.apiKey}` : ''}`;
+      const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collectionName}/${docId}?updateMask.fieldPaths=payload&updateMask.fieldPaths=updatedAt${this.apiKey ? `&key=${this.apiKey}` : ''}`;
       
       const response = await fetch(url, {
         method: 'PATCH',
@@ -116,17 +130,17 @@ class FirebaseDBService {
 
       return response.ok;
     } catch (err) {
-      console.warn('[FirebaseDBService] Erro ao salvar dados no Firebase Firestore:', err);
+      console.warn(`[FirebaseDBService] Erro ao salvar documento na coleção ${collectionName}:`, err);
       return false;
     }
   }
 
-  // Fetch Tenant Data from Firestore
-  async fetchTenantDataFromCloud(tenantId) {
+  // Generic Fetch Document from Cloud
+  async fetchDocumentFromCloud(collectionName, docId) {
     if (!this.projectId) return null;
 
     try {
-      const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/tenants/${tenantId}${this.apiKey ? `?key=${this.apiKey}` : ''}`;
+      const url = `https://firestore.googleapis.com/v1/projects/${this.projectId}/databases/(default)/documents/${collectionName}/${docId}${this.apiKey ? `?key=${this.apiKey}` : ''}`;
       const response = await fetch(url);
 
       if (response.ok) {
@@ -138,9 +152,19 @@ class FirebaseDBService {
       }
       return null;
     } catch (err) {
-      console.warn('[FirebaseDBService] Erro ao carregar dados do Firebase Firestore:', err);
+      console.warn(`[FirebaseDBService] Erro ao buscar documento da coleção ${collectionName}:`, err);
       return null;
     }
+  }
+
+  // Save Tenant Data to Firestore
+  async saveTenantDataToCloud(tenantId, data) {
+    return this.saveDocumentToCloud('tenants', tenantId, data);
+  }
+
+  // Fetch Tenant Data from Firestore
+  async fetchTenantDataFromCloud(tenantId) {
+    return this.fetchDocumentFromCloud('tenants', tenantId);
   }
 
   async testConnection() {

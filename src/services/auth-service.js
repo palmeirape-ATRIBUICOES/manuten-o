@@ -2,7 +2,8 @@
    AUTH SERVICE - SAFE JSON PARSING & MULTITENANT CREATION
    ========================================================================== */
 
-import { TRIAL_CONFIG } from '../config/plans.js';
+import { TRIAL_CONFIG } from '../config/plans.js?v=3.0.0';
+import { firebaseDBService } from './firebase-db-service.js?v=3.0.0';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'saas_asset_current_user',
@@ -143,16 +144,69 @@ class AuthService {
 
     this.setCurrentUser(newUser);
 
+    // Save User & Account Records to Firebase Cloud DB in background
+    firebaseDBService.saveUserRecordToCloud(cleanEmail, {
+      user: newUser,
+      tenant: newTenant,
+      subscription: newSub
+    }).catch(() => {});
+
+    firebaseDBService.saveDocumentToCloud('global_auth', 'users_list', users).catch(() => {});
+
     return { user: newUser, tenant: newTenant, subscription: newSub };
   }
 
-  login(email, password) {
-    const users = this.getAllUsers();
+  async login(email, password) {
     const cleanEmail = (email || '').trim().toLowerCase();
-    const foundUser = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+    let users = this.getAllUsers();
+    let foundUser = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+    // If not found in local browser storage, attempt Cloud DB lookup
+    if (!foundUser) {
+      try {
+        const cloudRecord = await firebaseDBService.fetchUserRecordFromCloud(cleanEmail);
+        if (cloudRecord && cloudRecord.user) {
+          foundUser = cloudRecord.user;
+
+          // Restore Tenant, User and Subscription into local browser storage
+          if (cloudRecord.tenant) {
+            const tenants = safeJSONParse(STORAGE_KEYS.TENANTS, []);
+            if (!tenants.find(t => t.id === cloudRecord.tenant.id)) tenants.push(cloudRecord.tenant);
+            localStorage.setItem(STORAGE_KEYS.TENANTS, JSON.stringify(tenants));
+          }
+
+          if (cloudRecord.subscription) {
+            const subs = safeJSONParse(STORAGE_KEYS.SUBSCRIPTIONS, []);
+            if (!subs.find(s => s.id === cloudRecord.subscription.id)) subs.push(cloudRecord.subscription);
+            localStorage.setItem(STORAGE_KEYS.SUBSCRIPTIONS, JSON.stringify(subs));
+          }
+
+          if (!users.find(u => u.id === foundUser.id)) {
+            users.push(foundUser);
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+          }
+
+          // Fetch Tenant Workspace Data from Cloud DB
+          const cloudTenantData = await firebaseDBService.fetchTenantDataFromCloud(foundUser.tenantId);
+          if (cloudTenantData) {
+            localStorage.setItem(`saas_asset_tenant_data_${foundUser.tenantId}`, JSON.stringify(cloudTenantData));
+          }
+        } else {
+          // Attempt global users list fetch
+          const globalList = await firebaseDBService.fetchDocumentFromCloud('global_auth', 'users_list');
+          if (Array.isArray(globalList) && globalList.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(globalList));
+            users = globalList;
+            foundUser = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
+          }
+        }
+      } catch (err) {
+        console.warn("[AuthService] Cloud login lookup failed:", err);
+      }
+    }
 
     if (!foundUser) {
-      throw new Error(`E-mail "${email}" não foi encontrado em nosso cadastro nesta máquina.`);
+      throw new Error(`E-mail "${email}" não foi encontrado em nosso cadastro. Verifique se digitou o e-mail corretamente ou crie uma conta grátis.`);
     }
 
     const calculatedHash = this.hashPassword(password);
@@ -162,7 +216,7 @@ class AuthService {
       foundUser.passwordHash === "hash_demo_123";
 
     if (!isValidPassword) {
-      throw new Error("Senha incorreta. Verifique se a tecla Caps Lock está ativada.");
+      throw new Error("Senha incorreta. Verifique a senha digitada.");
     }
 
     if (!foundUser.isActive) {
